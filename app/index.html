@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>目次｜JAMSTACK-HISTORY</title>
+<meta name="description" content="Web技術の歴史をめぐる資料の目次。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  /* =======================================================================
+     デジタル庁デザインシステム（DADS）準拠
+     カラー値の出典: @digital-go-jp/design-tokens v2.0.1
+     ======================================================================= */
+  :root {
+    /* ニュートラル */
+    --white: #ffffff;
+    --gray-50: #f2f2f2;
+    --gray-200: #cccccc;
+    --gray-420: #949494;   /* 対白 3.03:1  非テキスト下限 */
+    --gray-536: #767676;   /* 対白 4.54:1  テキスト下限 */
+    --gray-800: #333333;   /* 対白 12.63:1 */
+    --gray-900: #1a1a1a;   /* 対白 17.40:1 */
+    --black: #000000;
+    /* 機能カラー */
+    --link: #0017c1;           /* blue-900     対白 11.10:1 */
+    --link-visited: #8b008b;   /* magenta-900  対白  8.50:1 */
+    --link-active: #ac3e00;    /* orange-900   対白  6.10:1 */
+    --focus-yellow: #ffd43d;   /* yellow-300   フォーカス（変更禁止） */
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--white);
+    color: var(--gray-900);
+    /* Std-17N-170 */
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 17px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+  }
+
+  /* ----- フォーカスインジケーター: Yellow-300 と Black の2重構造 ----- */
+  a:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 2px;
+    background-color: var(--focus-yellow);
+    color: var(--gray-900);
+    box-shadow: 0 0 0 2px var(--focus-yellow);
+    text-decoration-color: var(--gray-900);
+  }
+
+  /* ----- レイアウト: 1カラム ----- */
+  .l-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ----- ヘッダー ----- */
+  .l-header {
+    border-bottom: 1px solid var(--gray-420);
+    padding: 16px 0;
+  }
+  .l-header .site-name {
+    /* Mono-16N-150 */
+    font-family: 'Noto Sans Mono', monospace;
+    font-size: 16px;
+    line-height: 1.5;
+    letter-spacing: 0;
+    color: var(--gray-800);
+    margin: 0;
+  }
+
+  /* ----- 本文領域 ----- */
+  .l-main { padding: 48px 0 80px; }
+
+  /* Std-45B-140 */
+  h1 {
+    font-size: 45px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0;
+    margin: 0 0 24px;
+  }
+
+  .p-lead {
+    margin: 0 0 48px;
+    color: var(--gray-800);
+  }
+
+  /* ----- 資料一覧 ----- */
+  .p-entry-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--gray-420);
+  }
+  .p-entry {
+    border-bottom: 1px solid var(--gray-420);
+    padding: 32px 0;
+  }
+
+  /* Std-24B-150 */
+  .p-entry__title {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    margin: 0 0 16px;
+  }
+
+  /* ----- リンクテキスト: 色 + 下線（色以外の手段を必ず併用） ----- */
+  .p-entry__title a,
+  .p-link {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  .p-entry__title a:visited,
+  .p-link:visited { color: var(--link-visited); }
+  .p-entry__title a:hover,
+  .p-link:hover { text-decoration-thickness: 3px; }
+  .p-entry__title a:active,
+  .p-link:active { color: var(--link-active); }
+
+  .p-entry__desc {
+    margin: 0 0 16px;
+    color: var(--gray-800);
+  }
+
+  /* ----- メタ情報: Std-16N-170 ----- */
+  .p-entry__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin: 0 0 16px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .p-entry__meta div { display: flex; gap: 8px; }
+  .p-entry__meta dt {
+    font-weight: 700;
+    color: var(--gray-800);
+  }
+  .p-entry__meta dd { margin: 0; }
+
+  /* ----- 収録内容: Dns-16N-130 ----- */
+  .p-entry__contents {
+    margin: 0;
+    padding: 16px;
+    background: var(--gray-50);
+    font-size: 16px;
+    line-height: 1.3;
+    color: var(--gray-800);
+  }
+  .p-entry__contents dt {
+    font-weight: 700;
+    margin: 0 0 8px;
+  }
+  .p-entry__contents dd {
+    margin: 0;
+    /* 折り返し時に読点で切れるようにする */
+    word-break: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.7;
+  }
+
+  /* ----- フッター ----- */
+  .l-footer {
+    border-top: 1px solid var(--gray-420);
+    padding: 24px 0 40px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-footer p { margin: 0; }
+
+  /* ----- モバイル・タブレット: 768px 未満 ----- */
+  @media (max-width: 767px) {
+    body {
+      /* Std-16N-175 */
+      font-size: 16px;
+      line-height: 1.75;
+    }
+    .l-container { padding: 0 16px; }
+    .l-main { padding: 32px 0 56px; }
+    /* Std-32B-150 */
+    h1 {
+      font-size: 32px;
+      line-height: 1.5;
+      letter-spacing: 0.01em;
+    }
+    /* Std-20B-150 */
+    .p-entry__title { font-size: 20px; }
+    .p-lead { margin-bottom: 32px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="l-header">
+  <div class="l-container">
+    <p class="site-name">JAMSTACK-HISTORY</p>
+  </div>
+</header>
+
+<main class="l-main">
+  <div class="l-container">
+
+    <h1>目次</h1>
+
+    <p class="p-lead">
+      Webという技術が、どんな制約に突き当たり、何を抽象化して乗り越えてきたのか。
+      その筋道をたどるための資料を置いています。
+    </p>
+
+    <ul class="p-entry-list">
+
+      <li class="p-entry">
+        <h2 class="p-entry__title">
+          <a href="/web-history">Web技術開発史 — ボトルネックと抽象化の叙事詩</a>
+        </h2>
+        <p class="p-entry__desc">
+          1945年のハイパーテキスト構想から、CGI、LAMP、Ajax、React、Next.js、そしてWebAssemblyまで。
+          各時代が抱えた構造的な限界と、それを解いた抽象化を順に追う長編の読み物です。
+        </p>
+        <dl class="p-entry__meta">
+          <div><dt>形式</dt><dd>読み物</dd></div>
+          <div><dt>分量</dt><dd>全9章</dd></div>
+          <div><dt>範囲</dt><dd>1945年〜2026年以降</dd></div>
+        </dl>
+        <dl class="p-entry__contents">
+          <dt>収録内容</dt>
+          <dd>00 序章／01 創世記／02 民主化／03 非同期／04 宣言的UI／05 Next.js／06 百花繚乱／07 WASM／∞ 終章</dd>
+        </dl>
+      </li>
+
+      <li class="p-entry">
+        <h2 class="p-entry__title">
+          <a href="/jamstack-history">Jamstackと、その先のWeb</a>
+        </h2>
+        <p class="p-entry__desc">
+          WordPress時代の限界からJamstackの誕生、定義の拡張、そしてNext.js以降に残された課題まで。
+          WebAssemblyとマルチランタイムに至る現在地を概観するスライドです。
+        </p>
+        <dl class="p-entry__meta">
+          <div><dt>形式</dt><dd>スライド</dd></div>
+          <div><dt>分量</dt><dd>全19枚</dd></div>
+          <div><dt>画面比</dt><dd>16:9</dd></div>
+        </dl>
+        <dl class="p-entry__contents">
+          <dt>収録内容</dt>
+          <dd>Webの仕組み／WordPress時代／Jamstackの誕生／定義の拡張／WebAssemblyとWASI／MoonBit／マルチランタイム</dd>
+        </dl>
+      </li>
+
+    </ul>
+
+  </div>
+</main>
+
+<footer class="l-footer">
+  <div class="l-container">
+    <p>mutexn</p>
+  </div>
+</footer>
+
+</body>
+</html>
