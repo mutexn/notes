@@ -16,10 +16,8 @@ notes/
 
 ```
 app/index.html                →  /
-app/<page-name>/index.html    →  /<page-name>
+app/<page-name>/index.html    →  /<page-name>/
 ```
-
-ページを追加したら、目次（`app/index.html`）からリンクする。
 
 ### reference/
 
@@ -27,16 +25,18 @@ app/<page-name>/index.html    →  /<page-name>
 
 ## 運用
 
-- 学習ノートは 1 トピック 1 ファイル、Markdown で書く
-- ファイル名は英小文字とハイフン（例: `fourier-transform.md`）
-- 書きかけでもコミットする。完成させてから、は永遠に来ない
+- ページは `app/<page-name>/index.html` として追加する
+- ディレクトリ名は英小文字とハイフン（例: `jamstack-history`）
+- ページを追加したら、目次（`app/index.html`）からリンクする
+- 各ページは単一の HTML で完結させる。CSS は `<style>` に含める
 - 出典は文末にリンクで残す
 
 ## ローカルプレビュー
 
+Cloudflare Pages と同じ配信エンジンで確認する。
+
 ```sh
-cd app
-python3 -m http.server 8788 --bind 127.0.0.1
+npx wrangler pages dev app
 ```
 
 http://127.0.0.1:8788/ で確認できる。
@@ -50,6 +50,11 @@ http://127.0.0.1:8788/ で確認できる。
 | ビルド出力ディレクトリ | `app` |
 
 出力ディレクトリを `app` に指定しないと、リポジトリ直下が配信されて `/app/...` のような URL になる。
+
+### 知っておくべき挙動
+
+- **存在しないパスには `/index.html` が HTTP 200 で返る**。`404.html` を置いていないため、Cloudflare Pages のフォールバックが働く。応答コードだけではファイルの有無を判断できない
+- ディレクトリ形式のページは、末尾スラッシュなしの URL（`/page-name`）から末尾スラッシュあり（`/page-name/`）へ 308 リダイレクトされる
 
 ## デザイン方針
 

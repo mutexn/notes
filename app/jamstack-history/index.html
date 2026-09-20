@@ -235,6 +235,19 @@ div#\:\$p > svg > foreignObject > section a:focus-visible{
 div#\:\$p > svg > foreignObject > section.lead::before{ --marpit-root-font-size: 16px; }
 div#\:\$p > svg > foreignObject > section section.small{ --marpit-root-font-size: 16px; }
 div#\:\$p > svg > foreignObject > section section.footnotes{ --marpit-root-font-size: 16px; }
+
+/* ----- 生成CSSに12px指定が残る要素の保険 -----
+   現時点でページ内に出現しないが、今後追加されたときに14px未満で描画されるのを防ぐ */
+div#\:\$p > svg > foreignObject > section :is(pre, marp-pre),
+div#\:\$p > svg > foreignObject > section samp,
+div#\:\$p > svg > foreignObject > section tt,
+div#\:\$p > svg > foreignObject > section .csv-data td,
+div#\:\$p > svg > foreignObject > section .csv-data th{
+  font-family: 'Noto Sans Mono', monospace;
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
 </style></head><body><div class="bespoke-marp-osc"><button data-bespoke-marp-osc="prev" tabindex="-1" title="Previous slide">Previous slide</button><span data-bespoke-marp-osc="page"></span><button data-bespoke-marp-osc="next" tabindex="-1" title="Next slide">Next slide</button><button data-bespoke-marp-osc="fullscreen" tabindex="-1" title="Toggle fullscreen (f)">Toggle fullscreen</button><button data-bespoke-marp-osc="presenter" tabindex="-1" title="Open presenter view (p)">Open presenter view</button></div><div id=":$p"><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="1" data-class="lead" data-theme="default" data-style="@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&amp;family=Noto+Sans+JP:wght@300;400;500;700&amp;family=Noto+Serif+JP:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap');
 
 :root {
