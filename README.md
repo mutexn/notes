@@ -19,6 +19,8 @@ app/index.html                →  /
 app/<page-name>/index.html    →  /<page-name>/
 ```
 
+`app/_headers` は Cloudflare Pages のレスポンスヘッダー設定で、全ページにセキュリティヘッダーを付与している。`Strict-Transport-Security` だけは Cloudflare 側（SSL/TLS → Edge Certificates）で設定しているため、このファイルには含めない。
+
 ### reference/
 
 外部資料の置き場。リポジトリの成果物ではなく、参照専用。

@@ -31,6 +31,18 @@ Cloudflare Pages の挙動で注意すべき点。
 - **存在しないパスには `/index.html` が HTTP 200 で返る**。`404.html` は置かない方針のため、Cloudflare Pages のフォールバックが働く。ファイルの有無を応答コードで判断できないので、存在確認をするときは中身まで見る
 - ディレクトリ形式のページは、末尾スラッシュなしの URL から末尾スラッシュありへ 308 リダイレクトされる
 
+## app/_headers の扱い
+
+全ページにセキュリティヘッダーを付与している。CSP は `default-src 'none'` を基点に、実際に使っているリソースだけを許可する方針。**ページを追加・変更したときに、意図せず遮断される可能性がある**ので次に注意する。
+
+- **外部リソースを増やしたら CSP を更新する**。現在の許可先は Google Fonts（スタイルが `fonts.googleapis.com`、フォント本体が `fonts.gstatic.com`）だけ。別の CDN やフォント、外部画像を読み込むと、CSP を直さない限りブラウザが遮断する
+- **JS で通信する場合は `connect-src` を追加する**。`default-src 'none'` のため、fetch・XHR・WebSocket・sendBeacon は現状すべて遮断される
+- **フォームを設置する場合は `form-action` を変更する**。現在は `'none'` で送信を全面的に禁止している
+- **`_headers` を編集したら wrangler を再起動する**。起動したままでは反映されない
+- `Strict-Transport-Security` は Cloudflare 側（SSL/TLS → Edge Certificates）で設定しているため、ここには書かない。二重に設定しない
+
+CSP に `'unsafe-inline'`（script）が入っているのは、既存ページにインライン `<script>` があるため。このサイトはフォームも外部 JS も動的入力もなく XSS の入口がないと判断した上での選択で、厳格化するならインラインスクリプトのハッシュを列挙する必要がある。
+
 ## 自動生成された HTML の扱い
 
 `app/` 配下には、Marp などのツールが出力した HTML が含まれることがある。元のソース（Markdown 等）はリポジトリに無く、**再生成できない**。次を守ること。
