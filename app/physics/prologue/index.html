@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>序章 物理学は、一度完成した — 物理学のストーリー</title>
+<meta name="description" content="ニュートンの『プリンキピア』から海王星の発見、ラプラスの悪魔へ。完成したはずの力学に続きがあった理由を、ラグランジュ、ハイゼンベルク、ファインマンの順にたどる。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  /* =======================================================================
+     デジタル庁デザインシステム（DADS）準拠
+     カラー値の出典: @digital-go-jp/design-tokens v2.0.1
+     トークンと l- / p- の命名は app/index.html に揃える
+     ======================================================================= */
+  :root {
+    --white: #ffffff;
+    --gray-50: #f2f2f2;
+    --gray-420: #949494;   /* 対白 3.03:1  非テキスト下限 */
+    --gray-536: #767676;   /* 対白 4.54:1  テキスト下限 */
+    --gray-800: #333333;   /* 対白 12.63:1 */
+    --gray-900: #1a1a1a;   /* 対白 17.40:1 */
+    --black: #000000;
+    --link: #0017c1;           /* blue-900     対白 11.10:1 */
+    --link-visited: #8b008b;   /* magenta-900  対白  8.50:1 */
+    --link-active: #ac3e00;    /* orange-900   対白  6.10:1 */
+    --focus-yellow: #ffd43d;   /* yellow-300   フォーカス（変更禁止） */
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--white);
+    color: var(--gray-900);
+    /* Std-17N-170 */
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 17px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+  }
+
+  /* ----- フォーカスインジケーター: Yellow-300 と Black の2重構造 ----- */
+  a:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 2px;
+    background-color: var(--focus-yellow);
+    color: var(--gray-900);
+    box-shadow: 0 0 0 2px var(--focus-yellow);
+    text-decoration-color: var(--gray-900);
+  }
+
+  /* ----- レイアウト ----- */
+  .l-container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .l-main { padding: 24px 0 80px; }
+
+  /* ----- パンくず -----
+     DADS components/breadcrumb: ヘッダーとページ見出しの間に置き、
+     コンテンツ幅を超える場合は改行する */
+  .l-breadcrumb {
+    padding: 24px 0 0;
+    /* Std-16N-170 */
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-breadcrumb ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 8px;
+  }
+  .l-breadcrumb li { display: flex; align-items: center; gap: 8px; }
+  .l-breadcrumb li + li::before { content: '\203A'; color: var(--gray-536); }
+
+  /* ----- 本文カラム -----
+     DADS foundations/layout のカラムオフセットに倣い、読み物は幅を絞る */
+  .p-prose { max-width: 720px; }
+
+  /* Std-45B-140 */
+  h1 {
+    font-size: 45px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0;
+    margin: 0 0 8px;
+  }
+  /* Std-24N-150 */
+  .p-subtitle {
+    margin: 0 0 24px;
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+
+  .p-prose p { margin: 0 0 20px; }
+  .p-prose > p:last-child { margin-bottom: 0; }
+
+  /* Std-32B-150 */
+  .p-prose h2 {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    margin: 64px 0 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gray-420);
+  }
+
+  /* ----- 本文中のリンク: 色以外にも下線で示す ----- */
+  .p-prose a, .l-breadcrumb a {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  .p-prose a:visited, .l-breadcrumb a:visited { color: var(--link-visited); }
+  .p-prose a:hover, .l-breadcrumb a:hover { text-decoration-thickness: 3px; }
+  .p-prose a:active, .l-breadcrumb a:active { color: var(--link-active); }
+
+  /* Std-24B-150。.p-view__title も h3 なので、
+     一般ルールが効かないよう .p-prose 直下だけに限定する */
+  .p-prose > h3 {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    margin: 40px 0 12px;
+  }
+
+  /* ----- 主張のブロック（ラプラスの悪魔）-----
+     原典の引用ではなく要約なので <blockquote> は使わない。
+     DADS の注釈ブロックも「補足情報」用で文脈の切り替えには使えないため、
+     独自に組む。境界は影ではなく罫線（gray-900 は対白 17.40:1） */
+  .p-claim {
+    margin: 32px 0;
+    padding: 20px 24px;
+    background: var(--gray-50);
+    border-left: 4px solid var(--gray-900);
+  }
+  /* Std-18N-160 */
+  .p-claim p {
+    margin: 0 0 16px;
+    font-size: 18px;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+  }
+  /* 出典注記: Std-16N-170。gray-50 の上なので gray-800（11.29:1） */
+  .p-claim__source {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+  }
+
+  /* ----- 3つの視点 -----
+     章カードと見た目が衝突しないよう、囲みではなく罫線で区切る */
+  .p-views {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+    border-top: 1px solid var(--gray-420);
+  }
+  .p-view {
+    padding: 20px 0;
+    border-bottom: 1px solid var(--gray-420);
+  }
+  /* Std-16N-170 */
+  .p-view__num {
+    margin: 0 0 4px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+    font-feature-settings: 'palt';
+  }
+  /* Std-20B-150 */
+  .p-view__title {
+    margin: 0 0 8px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+  /* Std-16N-170 */
+  .p-view__desc {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+  }
+
+  /* ----- ページ内目次 ----- */
+  .p-toc {
+    margin: 0 0 8px;
+    padding: 20px 24px;
+    background: var(--white);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+  }
+  .p-toc__title {
+    margin: 0 0 8px;
+    /* Std-16B-170 */
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+  .p-toc ol {
+    margin: 0;
+    padding-left: 1.4em;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .p-toc li { margin-bottom: 4px; }
+  .p-toc li:last-child { margin-bottom: 0; }
+
+  /* .p-prose a の下線・色は本文中のテキストリンク用。
+     ブロック全体を包むリンクには効かせない（下線はタイトルだけに付ける） */
+  .p-prose a.p-next {
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+
+  /* ----- 次章への導線 -----
+     DADS: コンテナ自体をクリッカブルエリア（フォーカス可能エリア）にできる。
+     その場合、コンテナ内に別のリンクを置いてはいけない */
+  .p-next {
+    display: block;
+    margin-top: 64px;
+    padding: 20px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+  a.p-next:hover { border-color: var(--gray-900); }
+  /* 大きな領域がフォーカス可能なので、全面を黄色で塗らずリング状の2重構造にする */
+  a.p-next:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    background-color: var(--gray-50);
+    box-shadow: 0 0 0 4px var(--focus-yellow);
+  }
+  /* gray-50 の上に載るので gray-800（11.29:1） */
+  .p-next__label {
+    margin: 0 0 4px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+    font-feature-settings: 'palt';
+  }
+  /* Std-20B-150。
+     DADS: コンテナ自体がリンクの場合もタイトルにアンダーラインを付与する */
+  .p-next__title {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+  a.p-next .p-next__title {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  a.p-next:visited .p-next__title { color: var(--link-visited); }
+  a.p-next:hover .p-next__title { text-decoration-thickness: 3px; }
+  a.p-next:active .p-next__title { color: var(--link-active); }
+  .p-next__desc {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+  }
+
+  /* ----- 数式（MathML）-----
+     ライブラリを使わずブラウザ内蔵の描画に任せる。
+     数式フォントはいずれもローカル。外部リソースを増やさない */
+  math {
+    font-family: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', 'Noto Sans Math', serif;
+  }
+
+  /* ----- フッター ----- */
+  .l-footer {
+    border-top: 1px solid var(--gray-420);
+    padding: 24px 0 40px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-footer p { margin: 0; }
+
+  /* ----- モバイル・タブレット: 768px 未満 ----- */
+  @media (max-width: 767px) {
+    body {
+      /* Std-16N-175 */
+      font-size: 16px;
+      line-height: 1.75;
+    }
+    .l-container { padding: 0 16px; }
+    .l-main { padding: 16px 0 56px; }
+    .l-breadcrumb { padding-top: 16px; }
+    /* Std-32B-150 */
+    h1 {
+      font-size: 32px;
+      line-height: 1.5;
+      letter-spacing: 0.01em;
+    }
+    /* Std-20N-150 */
+    .p-subtitle {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+    /* Std-28B-150 */
+    .p-prose h2 {
+      font-size: 28px;
+      margin-top: 48px;
+    }
+    /* Std-22B-150 */
+    .p-prose > h3 { font-size: 22px; }
+    .p-claim { padding: 16px; }
+    /* Std-17N-170 */
+    .p-claim p { font-size: 17px; line-height: 1.7; }
+    .p-view { padding: 16px 0; }
+    .p-toc { padding: 16px; }
+    .p-next { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="l-breadcrumb" aria-label="パンくず">
+  <div class="l-container">
+    <ol>
+      <li><a href="/">目次</a></li>
+      <li><a href="/physics/">物理学のストーリー</a></li>
+      <li aria-current="page">序章</li>
+    </ol>
+  </div>
+</nav>
+
+<main class="l-main">
+  <div class="l-container">
+    <div class="p-prose">
+
+      <h1>序章　物理学は、一度完成した</h1>
+      <p class="p-subtitle">ニュートンからラプラスの悪魔、そしてファインマンまで</p>
+
+      <p>
+        高校物理で習った <math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover></mrow></math> は、間違っていません。むしろ正しすぎるほど正しい。<br />
+        にもかかわらず物理学は、この式の上に解析力学を積み、さらにその上に量子力学を積みました。
+      </p>
+
+      <p>
+        なぜそんなことをしたのか。<br />
+        理由をたどっていくと、物理学は「公式の一覧」ではなく、<strong>一本の物語</strong>として読めるようになります。
+      </p>
+
+      <nav class="p-toc" aria-label="このページの目次">
+        <p class="p-toc__title">このページの内容</p>
+        <ol>
+          <li><a href="#newton-era">1687年 — 世界は解けた</a></li>
+          <li><a href="#laplace">ラプラスの悪魔</a></li>
+          <li><a href="#two-events">しかし、2つのことが起きた</a></li>
+          <li><a href="#answer">そして、①の謎に②が答えた</a></li>
+          <li><a href="#three-views">3つの視点</a></li>
+        </ol>
+      </nav>
+
+      <section id="newton-era">
+        <h2>1687年 — 世界は解けた</h2>
+
+        <p>
+          ニュートンが『プリンキピア』を出したのが1687年です。<br />
+          手から落ちるりんごと、空をめぐる月。それまで別々の世界の出来事だったものが、たった一本の式で同じ運動として書かれました。
+        </p>
+
+        <p>
+          18世紀に入ると、オイラー、ダランベール、ラグランジュ、ラプラスといった人々が、この式を扱う技術を磨き上げていきます。<br />
+          やがて力学は、説明の道具から<strong>予言の道具</strong>に変わりました。
+        </p>
+
+        <p>
+          ハレーは、ある彗星が1758年ごろに戻ってくると計算しました。<br />
+          彼の死から16年後、彗星は本当に戻ってきました。
+        </p>
+
+        <p>
+          1846年には、ルヴェリエが天王星の軌道のごくわずかなずれだけを手がかりに、まだ誰も見たことのない惑星の位置を紙の上で割り出します（イギリスのアダムズも独立に同じ計算に辿り着いていました）。<br />
+          ガレがその方向に望遠鏡を向けると、海王星がそこにいました。
+        </p>
+
+        <p>
+          <strong>計算が、空を指さした。</strong><br />
+          物理学はそういう段階に入っていたのです。
+        </p>
+      </section>
+
+      <section id="laplace">
+        <h2>ラプラスの悪魔</h2>
+
+        <p>
+          この成功を極限まで推し進めたらどうなるか。<br />
+          ラプラスが1814年に書いたのが、次の知性です。
+        </p>
+
+        <div class="p-claim">
+          <p>
+            ある瞬間に、宇宙を構成するすべての粒子の位置と運動量を知り、そのすべてに運動方程式を適用できる知性がいたとしよう。<br />
+            その知性にとって、未来はすでに起きたことと変わらず、過去もまた目の前にある。<br />
+            不確かなものは、何ひとつ残らない。
+          </p>
+          <p class="p-claim__source">
+            ラプラス『確率についての哲学的試論』（1814年）の主張を要約したもの。のちに「ラプラスの悪魔」と呼ばれます。
+          </p>
+        </div>
+
+        <p>
+          これは思いつきの誇張ではありません。ニュートン力学を素直に信じたときに、論理として出てきてしまう結論です。<br />
+          世界は巨大な時計仕掛けで、いまの状態が次の状態を一意に決める。
+        </p>
+
+        <p>
+          であれば、物理学に残された仕事は精度を上げることだけではないか。<br />
+          19世紀の終わりには、本気でそう考えられていました。<strong>物理学は、一度完成したように見えたのです。</strong>
+        </p>
+      </section>
+
+      <section id="two-events">
+        <h2>しかし、2つのことが起きた</h2>
+
+        <p>
+          見えただけでした。<br />
+          このあと、性格のまったく違う2つの出来事が起こります。
+        </p>
+
+        <h3>① 力を使わない力学が現れた</h3>
+
+        <p>
+          ひとつ目は、量子力学よりはるか前に起きています。
+        </p>
+
+        <p>
+          モーペルテュイとオイラーが1744年ごろに「自然は何かを最小にするように振る舞う」と言い出し、1788年にラグランジュが、1830年代にハミルトンが、それを完全な理論に仕立てました。<br />
+          そこには<strong>力という言葉が一度も出てきません</strong>。にもかかわらず、答えはニュートンとぴたりと一致します。
+        </p>
+
+        <p>
+          当時これは、計算を楽にする便利な技法として受け入れられました。<br />
+          けれど、居心地の悪い問いが残ります。
+        </p>
+
+        <p>
+          ボールはまだ飛んでいないのに、どうやって「一番マシな道」を選んだのか。<br />
+          力に押されて結果的にそうなった、という話ではありません。<strong>行き先を含む経路の全体を、あらかじめ比べたように見える。</strong><br />
+          まるで自然が目的を持っているかのようです。
+        </p>
+
+        <h3>② 悪魔の前提が消えた</h3>
+
+        <p>
+          ふたつ目は20世紀です。<br />
+          プランク、アインシュタイン、ボーア、ド・ブロイと続いた探求の果てに、1927年、ハイゼンベルクがこう示します。<br />
+          <strong>位置と運動量を同時に確定した値として持つ粒子は、そもそも存在しない。</strong>
+        </p>
+
+        <p>
+          測定が乱すから知ることができない、という話ではありません。<br />
+          両方が同時に定まっている、という状態そのものが自然界にない、ということです。
+        </p>
+
+        <p>
+          これはラプラスの悪魔にとって致命的でした。悪魔は計算が遅かったわけではない。<br />
+          <strong>悪魔に与えるべき入力のほうが、この宇宙のどこにも存在しなかった。</strong>
+        </p>
+
+        <p>
+          ついでに言えば、量子力学が確率的なのは測定について語るときの話で、波動関数そのものの時間発展は今でも決定論的です。<br />
+          悪魔が失ったのは計算能力ではなく、「粒子は一本の軌道を持っている」という前提のほうでした。
+        </p>
+      </section>
+
+      <section id="answer">
+        <h2>そして、①の謎に②が答えた</h2>
+
+        <p>
+          ここがこの物語のいちばん面白いところです。
+        </p>
+
+        <p>
+          1948年、ファインマンが経路積分という形式を作ります。その答えはこうでした。<br />
+          <strong>自然は一番マシな道を知っていたのではない。あらゆる道を、同時に通っている。</strong>
+        </p>
+
+        <p>
+          粒子は波として全部の経路に広がり、経路ごとに位相を持ちます。<br />
+          でたらめな経路は隣どうしで位相がずれて打ち消し合い、消えてしまう。<br />
+          打ち消し合いを生き延びるのは、作用が極値になる経路のまわりだけです。
+        </p>
+
+        <p>
+          ラグランジュが見つけた「気味の悪い原理」は、目的論ではありませんでした。<br />
+          <strong>量子の干渉が、私たちの世界に落とした影だった。</strong>
+        </p>
+
+        <p>
+          ニュートンが引いた一本の線は、そうやって最後にもう一度、まったく別の理由で引き直されます。
+        </p>
+      </section>
+
+      <section id="three-views">
+        <h2>3つの視点</h2>
+
+        <p>
+          ここまでの物語を、3つの視点として並べ直します。<br />
+          投げたボールが描く放物線。たったひとつのこの現象が、視点を変えるたびに、まったく違う理由で説明されます。
+        </p>
+
+        <ul class="p-views">
+          <li>
+            <div class="p-view">
+              <p class="p-view__num">視点 1</p>
+              <h3 class="p-view__title">ニュートン力学 — 力から運動を求める</h3>
+              <p class="p-view__desc">
+                物体に働く力をすべて数え上げ、運動方程式を解く。いま働いている力が、次の瞬間の速度を決める。<br />
+                放物線は、一瞬ごとに下へ引かれ続けた結果として現れる。
+              </p>
+            </div>
+          </li>
+          <li>
+            <div class="p-view">
+              <p class="p-view__num">視点 2</p>
+              <h3 class="p-view__title">解析力学 — エネルギーから運動を求める</h3>
+              <p class="p-view__desc">
+                運動エネルギーとポテンシャルエネルギーから「作用」という量を作り、それが極値になる経路を選ぶ。力は一度も出てこない。<br />
+                放物線は、始点と終点を結ぶ無数の経路から選ばれた1本として現れる。
+              </p>
+            </div>
+          </li>
+          <li>
+            <div class="p-view">
+              <p class="p-view__num">視点 3</p>
+              <h3 class="p-view__title">量子力学 — 波の重ね合わせから運動を求める</h3>
+              <p class="p-view__desc">
+                粒子は波として全部の経路に広がり、経路ごとの位相が干渉する。<br />
+                放物線は、打ち消し合いを生き延びて残った縞として現れる。
+              </p>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <a class="p-next" href="/physics/newton/" aria-labelledby="next-newton">
+        <p class="p-next__label">次の章</p>
+        <p class="p-next__title" id="next-newton">第1章　ニュートン力学 — 力から運動を求める</p>
+        <p class="p-next__desc">
+          物語の出発点に戻ります。原理として覚えるべきなのは3法則だけで、高校力学の大部分はその事例集である。<br />
+          第一法則が計算の「舞台」を決め、第二法則を空間と時間で集めるとエネルギーと運動量が出てきます。
+        </p>
+      </a>
+
+    </div>
+  </div>
+</main>
+
+<footer class="l-footer">
+  <div class="l-container">
+    <p>mutexn</p>
+  </div>
+</footer>
+
+</body>
+</html>
