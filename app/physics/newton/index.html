@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>第1章 ニュートン力学 — 力から運動を求める</title>
+<meta name="description" content="ニュートンの三法則をばらして組み直す。第一法則は現象の記述ではなく慣性系の存在宣言であり、運動量とエネルギーは運動方程式を時間と空間で積分した派生物である。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  /* =======================================================================
+     デジタル庁デザインシステム（DADS）準拠
+     カラー値の出典: @digital-go-jp/design-tokens v2.0.1
+     トークンと l- / p- の命名は app/index.html に揃える
+     ======================================================================= */
+  :root {
+    --white: #ffffff;
+    --gray-50: #f2f2f2;
+    --gray-420: #949494;   /* 対白 3.03:1  非テキスト下限 */
+    --gray-536: #767676;   /* 対白 4.54:1  テキスト下限 */
+    --gray-800: #333333;   /* 対白 12.63:1 */
+    --gray-900: #1a1a1a;   /* 対白 17.40:1 */
+    --black: #000000;
+    --link: #0017c1;           /* blue-900     対白 11.10:1 */
+    --link-visited: #8b008b;   /* magenta-900  対白  8.50:1 */
+    --link-active: #ac3e00;    /* orange-900   対白  6.10:1 */
+    --focus-yellow: #ffd43d;   /* yellow-300   フォーカス（変更禁止） */
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--white);
+    color: var(--gray-900);
+    /* Std-17N-170 */
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 17px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+  }
+
+  /* ----- フォーカスインジケーター: Yellow-300 と Black の2重構造 ----- */
+  a:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 2px;
+    background-color: var(--focus-yellow);
+    color: var(--gray-900);
+    box-shadow: 0 0 0 2px var(--focus-yellow);
+    text-decoration-color: var(--gray-900);
+  }
+
+  /* ----- レイアウト ----- */
+  .l-container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .l-main { padding: 24px 0 80px; }
+
+  /* ----- パンくず -----
+     DADS components/breadcrumb: ヘッダーとページ見出しの間に置き、
+     コンテンツ幅を超える場合は改行する */
+  .l-breadcrumb {
+    padding: 24px 0 0;
+    /* Std-16N-170 */
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-breadcrumb ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 8px;
+  }
+  .l-breadcrumb li { display: flex; align-items: center; gap: 8px; }
+  .l-breadcrumb li + li::before { content: '\203A'; color: var(--gray-536); }
+
+  /* ----- 本文カラム -----
+     DADS foundations/layout のカラムオフセットに倣い、読み物は幅を絞る */
+  .p-prose { max-width: 720px; }
+
+  /* Std-45B-140 */
+  h1 {
+    font-size: 45px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0;
+    margin: 0 0 8px;
+  }
+  /* Std-24N-150 */
+  .p-subtitle {
+    margin: 0 0 24px;
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+
+  .p-prose p { margin: 0 0 20px; }
+  .p-prose ul { margin: 0 0 20px; padding-left: 1.6em; }
+  .p-prose li { margin-bottom: 8px; }
+
+  /* Std-32B-150 */
+  .p-prose h2 {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    margin: 0 0 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gray-420);
+  }
+  /* 節番号。見出しの上に小さく置く: Std-16N-170 */
+  .p-prose h2 .p-secnum {
+    display: block;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-536);
+  }
+  /* Std-24B-150 */
+  .p-prose h3 {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    margin: 40px 0 12px;
+  }
+
+  /* 節。次の節との間をしっかり空ける */
+  .p-section { margin-top: 64px; }
+
+  /* キャッチコピー: Std-20N-150 */
+  .p-catch {
+    margin: 0 0 24px;
+    font-size: 20px;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+
+  /* ----- 本文中のリンク: 色以外にも下線で示す ----- */
+  .p-prose a, .l-breadcrumb a {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  .p-prose a:visited, .l-breadcrumb a:visited { color: var(--link-visited); }
+  .p-prose a:hover, .l-breadcrumb a:hover { text-decoration-thickness: 3px; }
+  .p-prose a:active, .l-breadcrumb a:active { color: var(--link-active); }
+
+  /* ----- ページ内目次 ----- */
+  .p-toc {
+    margin: 0 0 8px;
+    padding: 20px 24px;
+    background: var(--white);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+  }
+  .p-toc__title {
+    margin: 0 0 8px;
+    /* Std-16B-170 */
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+  .p-toc ol {
+    margin: 0;
+    padding-left: 1.4em;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .p-toc li { margin-bottom: 4px; }
+  .p-toc li:last-child { margin-bottom: 0; }
+
+  /* ----- 問い・コラム・一歩先の視点 -----
+     DADS の注釈ブロックは「補足情報」のためのコンポーネントで、
+     コラムのように文脈を切り替える目的には使ってはいけないと規定されている。
+     よって注釈ブロックを流用せず、独自のブロックとして組む。
+     境界は影ではなく罫線で示す（--gray-420 / --link はいずれも対白 3:1 以上） */
+  .p-question, .p-column, .p-aside {
+    margin: 32px 0;
+    padding: 20px 24px;
+    background: var(--gray-50);
+    border-left: 4px solid var(--gray-420);
+  }
+  .p-question { border-left-color: var(--link); }
+  /* Std-18B-160 */
+  .p-question__title, .p-column__title, .p-aside__title {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+  }
+  .p-question p, .p-column p, .p-aside p { margin: 0 0 16px; }
+  .p-question p:last-child, .p-column p:last-child, .p-aside p:last-child { margin-bottom: 0; }
+
+  /* ----- 数式（MathML）-----
+     ライブラリを使わずブラウザ内蔵の描画に任せる。
+     数式フォントはいずれもローカル。外部リソースを増やさない */
+  math {
+    font-family: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', 'Noto Sans Math', serif;
+  }
+  /* 独立した式。狭い画面で溢れたら横スクロールで救う */
+  .p-math {
+    margin: 24px 0;
+    padding: 16px 20px;
+    overflow-x: auto;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-420);
+    border-radius: 4px;
+  }
+  .p-math math { font-size: 20px; }
+  /* 式変形を縦に並べるとき、等号の位置を揃える。
+     MathML Core は mtable の columnalign を解釈しないので CSS で指定する
+     （左辺は右寄せ、等号は中央、右辺は左寄せ） */
+  .p-math mtd { text-align: center; }
+  .p-math mtd:nth-child(1) { text-align: right; }
+  .p-math mtd:nth-child(3) { text-align: left; }
+  /* 式に添える注記: Std-16N-170。gray-50 の上なので gray-800（11.29:1） */
+  .p-math__note {
+    margin: 8px 0 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+    text-align: center;
+  }
+
+  /* ----- 対比表 -----
+     DADS: 高密度用途の行高は 130%（Dns-16N-130） */
+  /* 横スクロールする領域はキーボードでも操作できる必要があるため、
+     マークアップ側で tabindex="0" と role="region" を付けている */
+  .p-table-wrap { margin: 0; overflow-x: auto; }
+  .p-table-wrap:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    box-shadow: 0 0 0 4px var(--focus-yellow);
+  }
+  .p-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+    line-height: 1.3;
+    letter-spacing: 0;
+  }
+  /* 見出しセルの背景が gray-50 のため、罫線は gray-420（対 gray-50 2.71:1）では
+     非テキスト下限 3:1 に届かない。gray-536（同 4.06:1）を使う */
+  .p-table th, .p-table td {
+    padding: 12px;
+    border: 1px solid var(--gray-536);
+    text-align: left;
+    vertical-align: top;
+  }
+  /* 表とその説明。説明は横スクロール領域の外に置く（中に入れると一緒に流れて切れる） */
+  .p-figure { margin: 24px 0; }
+  /* Std-16N-170 */
+  .p-table__caption {
+    margin: 0 0 8px;
+    font-size: 16px;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-536);
+    text-align: left;
+  }
+  /* 横スクロールの手がかり。スクロールが起きる幅でだけ出す */
+  .p-table__hint { display: none; }
+  .p-table thead th {
+    background: var(--gray-50);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .p-table tbody th {
+    background: var(--gray-50);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* ----- 次章への導線 ----- */
+  .p-next {
+    margin-top: 64px;
+    padding: 20px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+  }
+  /* gray-50 の上に載るので gray-800（11.29:1） */
+  .p-next__label {
+    margin: 0 0 4px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+    font-feature-settings: 'palt';
+  }
+  /* Std-20B-150 */
+  .p-next__title {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+  .p-next__desc {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+  }
+  .p-status {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 0 8px;
+    border: 1px solid var(--gray-536);
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+    vertical-align: middle;
+  }
+
+  /* ----- フッター ----- */
+  .l-footer {
+    border-top: 1px solid var(--gray-420);
+    padding: 24px 0 40px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-footer p { margin: 0; }
+
+  /* ----- モバイル・タブレット: 768px 未満 ----- */
+  @media (max-width: 767px) {
+    body {
+      /* Std-16N-175 */
+      font-size: 16px;
+      line-height: 1.75;
+    }
+    .l-container { padding: 0 16px; }
+    .l-main { padding: 16px 0 56px; }
+    .l-breadcrumb { padding-top: 16px; }
+    /* Std-32B-150 */
+    h1 {
+      font-size: 32px;
+      line-height: 1.5;
+      letter-spacing: 0.01em;
+    }
+    /* Std-20N-150 */
+    .p-subtitle {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+    /* Std-28B-150 */
+    .p-prose h2 { font-size: 28px; }
+    /* Std-22B-150 */
+    .p-prose h3 { font-size: 22px; }
+    .p-section { margin-top: 48px; }
+    /* Std-18N-160 */
+    .p-catch { font-size: 18px; line-height: 1.6; }
+    .p-toc { padding: 16px; }
+    .p-question, .p-column, .p-aside { padding: 16px; }
+    .p-math { padding: 12px; }
+    .p-math math { font-size: 18px; }
+    /* 3列を 375px に詰め込むと1行あたり数文字になって読めない。
+       列の多い表だけ、列幅を確保して横スクロールに切り替える */
+    .p-figure.is-wide .p-table { min-width: 520px; }
+    .p-figure.is-wide .p-table__hint { display: inline; }
+    .p-next { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="l-breadcrumb" aria-label="パンくず">
+  <div class="l-container">
+    <ol>
+      <li><a href="/">目次</a></li>
+      <li><a href="/physics/">物理学のストーリー</a></li>
+      <li aria-current="page">第1章 ニュートン力学</li>
+    </ol>
+  </div>
+</nav>
+
+<main class="l-main">
+  <div class="l-container">
+    <div class="p-prose">
+
+      <h1>第1章　ニュートン力学</h1>
+      <p class="p-subtitle">力から運動を求める</p>
+
+      <p class="p-catch">「毎瞬間の計算」から、「全体をまとめて見渡す」テクニックへ。</p>
+
+      <p>
+        ニュートン力学のスタート地点は、たった3つの法則です。<br />
+        まずは高校物理の全体像を整理し、「正しい視点（舞台）」の選び方、そして変化する計算を劇的にラクにする「まとめ算」の仕組みを解き明かします。
+      </p>
+
+      <nav class="p-toc" aria-label="このページの目次">
+        <p class="p-toc__title">このページの内容</p>
+        <ol>
+          <li><a href="#three-laws">1-1. ニュートンの3法則</a></li>
+          <li><a href="#inertial-frame">1-2. 舞台の秘密（慣性系と第一法則）</a></li>
+          <li><a href="#energy-momentum">1-3. エネルギーと運動量（空間と時間で力をまとめる）</a></li>
+        </ol>
+      </nav>
+
+      <section class="p-section" id="three-laws">
+        <h2><span class="p-secnum">1-1</span>ニュートンの3法則</h2>
+
+        <h3>すべての出発点</h3>
+
+        <p>
+          力学のあらゆる計算は、この3つのルールだけで成り立っています。
+        </p>
+
+        <figure class="p-figure">
+          <figcaption class="p-table__caption" id="cap-laws">ニュートンの3法則。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-table-wrap" tabindex="0" role="region" aria-labelledby="cap-laws">
+            <table class="p-table" aria-labelledby="cap-laws">
+              <thead>
+                <tr>
+                  <th scope="col">法則</th>
+                  <th scope="col">内容</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">第一法則<br />慣性の法則</th>
+                  <td>力を加えない限り、静止しているものは静止し続け、動いているものは等速直線運動を続ける。</td>
+                </tr>
+                <tr>
+                  <th scope="row">第二法則<br />運動方程式</th>
+                  <td>物体に力を加えると、力の方向に加速度が生じる（<math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover></mrow></math>）。</td>
+                </tr>
+                <tr>
+                  <th scope="row">第三法則<br />作用・反作用の法則</th>
+                  <td>物体 A が B を押すとき、B も A を同じ大きさ・逆向きの力で押し返している。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </figure>
+
+        <h3>高校で習うニュートン力学の「正体」</h3>
+
+        <p>
+          高校の教科書を開くと、重力、ばねの力、摩擦力、浮力、単振動、円運動……と膨大な公式が出てきて、難しく感じられます。<br />
+          けれど、<strong>原理として覚えるべきなのは上の3法則だけです。</strong>
+        </p>
+
+        <p>
+          高校力学の大部分は、この3法則に出てくる「力」や「運動」にいろいろなバリエーションを当てはめて計算してみせる、<strong>事例集（ケーススタディ）</strong>にすぎません。<br />
+          ばねなら力が伸びに比例し、円運動なら力が常に中心を向く。当てはめる力が違うだけで、解いている式はずっと同じです。
+        </p>
+      </section>
+
+      <section class="p-section" id="inertial-frame">
+        <h2><span class="p-secnum">1-2</span>舞台の秘密（慣性系と第一法則）</h2>
+
+        <div class="p-question">
+          <p class="p-question__title">【問い】第二法則があれば、第一法則はいらないのでは？</p>
+          <p>
+            第二法則の式 <math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover></mrow></math> を見てみましょう。力がかかっていない（<math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mn>0</mn></mrow></math>）とすれば、自動的に加速度もゼロ（<math><mrow><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mn>0</mn></mrow></math>）、つまり「等速直線運動か静止」になります。
+          </p>
+          <p>
+            じゃあ第一法則は、第二法則のただのオマケではないか。<br />
+            なぜニュートンは、これを独立した「第一の」法則として最初に置いたのでしょうか。
+          </p>
+        </div>
+
+        <h3>主役は「動いている物体」ではなく「見ているあなた」</h3>
+
+        <p>
+          第一法則の本当の目的は、<strong>「<math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover></mrow></math> という計算がそのまま使える『正しい視点』を宣言すること」</strong>にあります。<br />
+          見ているあなた自身の足場が加速していると、この世界は一気に狂い出します。
+        </p>
+
+        <p>
+          加速する電車で考えてみます。
+        </p>
+
+        <ul>
+          <li>
+            <strong>ホームに立つあなた（正しい視点＝慣性系）</strong><br />
+            車内のボールは、電車と一緒に前へ加速して見えます。「電車の床や壁から力を受けて加速している」と、<math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover></mrow></math> で正しく計算できます。
+          </li>
+          <li>
+            <strong>電車に乗っているあなた（歪んだ視点＝非慣性系）</strong><br />
+            よく滑る床にボールを置いて手を離すと、誰も触っていないのに勝手に後ろへ転がり出します。力がかかっていないのに加速した（<math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mn>0</mn></mrow></math> なのに <math><mrow><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover><mo>≠</mo><mn>0</mn></mrow></math>）。<math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover></mrow></math> が壊れています。
+          </li>
+        </ul>
+
+        <p>
+          車内の観測者は、崩れた <math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover></mrow></math> を取り繕うために、<strong>慣性力</strong>という「幽霊の力」を持ち出さざるを得ません。回転する場所なら遠心力やコリオリ力が、その仲間です。<br />
+          この幽霊の力が必要になってしまう場所を<strong>非慣性系</strong>と呼びます。
+        </p>
+
+        <p>
+          幽霊と呼ぶ理由は、押し返してくる相手がいないからです。慣性力には反作用のペアがなく、第三法則を満たしません。
+        </p>
+
+        <h3>第一法則の結論 — 舞台の宣言</h3>
+
+        <p>
+          第一法則が言いたいのは、単なる物体の性質ではありません。
+        </p>
+
+        <p>
+          <strong>「力が働いていないものが、ちゃんと止まって（または等速で）見えるような真っ当な視点が、この宇宙には存在する。まずその視点に立ってから <math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover></mrow></math> を計算しなさい」</strong><br />
+          この<strong>舞台設定の宣言</strong>こそが、第一法則の正体です。その舞台を<strong>慣性系</strong>と呼びます。
+        </p>
+
+        <p>
+          順番が逆だったのです。<br />
+          第二法則があって第一法則が導けるのではなく、第一法則が舞台を用意して、はじめて第二法則が書ける。舞台の指定なしに書かれた <math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover></mrow></math> は、そもそも意味を持ちません。
+        </p>
+
+        <p>
+          なお、第一法則を「慣性系の存在宣言」と読むのは現代の標準的な解釈のひとつで、ニュートン自身の書きぶりとは異なります。ただ、第二法則との関係をもっともすっきり説明します。
+        </p>
+
+        <div class="p-aside">
+          <p class="p-aside__title">【一歩先の視点】慣性系は、どこまで広げられるか</p>
+          <p>
+            第一法則を「歪みのない座標系の存在宣言」と読むと、一般相対性理論への道が見えてきます。
+          </p>
+          <p>
+            一般相対論では、座標の取り方によって現れる見かけの効果をクリストッフェル記号 <math><msubsup><mi mathvariant="normal">Γ</mi><mrow><mi>i</mi><mi>j</mi></mrow><mi>k</mi></msubsup></math> という量にまとめます。<br />
+            慣性力はちょうどこの <math><mi mathvariant="normal">Γ</mi></math> に対応し、<math><mrow><msubsup><mi mathvariant="normal">Γ</mi><mrow><mi>i</mi><mi>j</mi></mrow><mi>k</mi></msubsup><mo>=</mo><mn>0</mn></mrow></math> となる座標系が「歪みのない舞台」＝慣性系にあたります。
+          </p>
+          <p>
+            ここで注意したいのは、<strong><math><mi mathvariant="normal">Γ</mi></math> をどこまで消せるのか</strong>です。<br />
+            ニュートン力学は「宇宙全体に広がる慣性系がある」と要請しました。一般相対論はこの要請を弱めます。消せるのは、時空の各点のまわり、<strong>その1点においてだけ</strong>。
+          </p>
+          <p>
+            自由落下するエレベーターの中では重力が消える。けれどそれは局所的な話で、エレベーターを十分に大きくすると、床と天井とで重力の向きがわずかに違うことが見えてしまいます（潮汐力）。<br />
+            この<strong>座標変換では消しきれずに残る分</strong>が時空の曲率であり、重力の正体です。
+          </p>
+          <p>
+            第一法則は「舞台がある」と宣言した。<br />
+            一般相対論は「舞台は各点ごとにしか用意できず、用意しきれなかった分が重力だ」と答えた。
+          </p>
+        </div>
+      </section>
+
+      <section class="p-section" id="energy-momentum">
+        <h2><span class="p-secnum">1-3</span>エネルギーと運動量（空間と時間で力をまとめる）</h2>
+
+        <div class="p-question">
+          <p class="p-question__title">【問い】なぜ運動方程式だけではダメなのか</p>
+          <p>
+            <math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover></mrow></math> は「今この瞬間」の計算式です。
+          </p>
+          <p>
+            しかし、曲がりくねったコースを落ちるジェットコースターのように力の向きが刻々と変わる場合や、野球のバットでボールを打つ瞬間のように力が激しく変化する場合、毎瞬間の <math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover></mrow></math> を追うのは大変すぎます。
+          </p>
+          <p>
+            そこで物理学は、<strong>毎瞬間の力を追うのをやめて、力を足し合わせて最初と最後だけを見る</strong>というショートカットを発明しました。<br />
+            足し合わせ方は2通りあります。<strong>距離で集めるか、時間で集めるか</strong>です。
+          </p>
+        </div>
+
+        <h3>力を「距離」で集める — 仕事とエネルギー</h3>
+
+        <p>
+          <math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover></mrow></math> の両辺に移動距離を掛けて足し合わせる（積分する）と、次の関係が現れます。
+        </p>
+
+        <div class="p-math">
+          <math display="block">
+            <mrow>
+              <mo>∫</mo><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>⋅</mo><mi>d</mi><mover accent="true"><mi>r</mi><mo stretchy="false">→</mo></mover>
+              <mo>=</mo>
+              <mi mathvariant="normal">Δ</mi><mi>K</mi>
+              <mo>,</mo>
+              <mspace width="1.2em" />
+              <mi>K</mi><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mi>m</mi><msup><mi>v</mi><mn>2</mn></msup>
+            </mrow>
+          </math>
+          <p class="p-math__note">力を距離で集めたものが仕事。その正体は運動エネルギーの変化。</p>
+        </div>
+
+        <p>
+          <strong>運動エネルギー</strong> <math><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mi>m</mi><msup><mi>v</mi><mn>2</mn></msup></mrow></math> は、物体が持っている「運動の激しさ」です。力と変位の内積を取った結果、向きを持たないスカラーになります。
+        </p>
+
+        <p>
+          そしてここで、特別な力の一群が姿を現します。<br />
+          重力やばねの力は、持ち上げた分だけ後で運動エネルギーとして代金が戻ってくる。言い換えると、A から B へ動かすときの仕事が経路によらず、両端の位置だけで決まります。こういう力を<strong>保存力</strong>と呼びます。
+        </p>
+
+        <p>
+          経路によらないのなら、仕事は位置だけの関数として書けるはずです。その関数が<strong>ポテンシャルエネルギー</strong> <math><mi>U</mi></math> 、いわば「貯金」であり、力との関係はこう書けます。
+        </p>
+
+        <div class="p-math">
+          <math display="block">
+            <mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mo>−</mo><mo>∇</mo><mi>U</mi></mrow>
+          </math>
+          <p class="p-math__note">力は、ポテンシャルという「地形」の傾き。</p>
+        </div>
+
+        <p>
+          働く力が保存力だけなら、貯金の減った分がそのまま運動エネルギーに変わります。
+        </p>
+
+        <div class="p-math">
+          <math display="block">
+            <mrow><mi>K</mi><mo>+</mo><mi>U</mi><mo>=</mo><mtext>一定</mtext></mrow>
+          </math>
+          <p class="p-math__note">力学的エネルギー保存則。</p>
+        </div>
+
+        <p>
+          コースがどう曲がっていようが、最初と最後の高さだけを見れば最終スピードが分かる。<br />
+          ジェットコースターの問いへの答えがこれです。途中の力を一度も計算していないのに、答えが出てしまいました。
+        </p>
+
+        <h3>力を「時間」で集める — 力積と運動量</h3>
+
+        <p>
+          今度は同じ <math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover></mrow></math> を、時間について足し合わせてみます。
+        </p>
+
+        <div class="p-math">
+          <math display="block">
+            <mrow>
+              <msubsup><mo>∫</mo><msub><mi>t</mi><mn>1</mn></msub><msub><mi>t</mi><mn>2</mn></msub></msubsup>
+              <mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover>
+              <mspace width="0.2em" />
+              <mi>d</mi><mi>t</mi>
+              <mo>=</mo>
+              <mi mathvariant="normal">Δ</mi><mover accent="true"><mi>p</mi><mo stretchy="false">→</mo></mover>
+              <mo>,</mo>
+              <mspace width="1.2em" />
+              <mover accent="true"><mi>p</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>v</mi><mo stretchy="false">→</mo></mover>
+            </mrow>
+          </math>
+          <p class="p-math__note">力を時間で集めたものが力積。その正体は運動量の変化。</p>
+        </div>
+
+        <p>
+          <strong>運動量</strong> <math><mrow><mi>m</mi><mover accent="true"><mi>v</mi><mo stretchy="false">→</mo></mover></mrow></math> は、物体が持っている「運動の勢い」です。内積を取らなかったぶん、エネルギーと違って<strong>向きを持つベクトル</strong>のまま残ります。
+        </p>
+
+        <p>
+          ここが効きます。右辺には時刻 <math><msub><mi>t</mi><mn>1</mn></msub></math> と <math><msub><mi>t</mi><mn>2</mn></msub></math> の情報しか入っていません。途中で力がどんな形をしていたかは、積分してしまえば消えてしまう。<br />
+          <strong>衝突の中身を知らなくても、前後だけ見れば答えが出る。</strong>
+        </p>
+
+        <p>
+          数字を入れてみます。<br />
+          質量 0.145 kg の球が 40 m/s で飛んできて、逆向きに 50 m/s で返っていったとします。速度の変化は 90 m/s ですから、運動量の変化は 0.145 × 90 ＝ 13.05 kg·m/s。<br />
+          接触していた時間を 1 ミリ秒とすれば、そのあいだの平均の力は——
+        </p>
+
+        <div class="p-math">
+          <math display="block">
+            <mrow>
+              <mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover>
+              <mo>≈</mo>
+              <mfrac><mrow><mn>13.05</mn></mrow><mrow><mn>0.001</mn></mrow></mfrac>
+              <mo>=</mo>
+              <mn>13050</mn><mspace width="0.2em" /><mtext>N</mtext>
+            </mrow>
+          </math>
+          <p class="p-math__note">およそ 1.3 トンの物体を持ち上げるのと同じ大きさの力。</p>
+        </div>
+
+        <p>
+          バットが球をどう押したかは、依然として誰も知りません。それでも答えが出てしまう。
+        </p>
+
+        <p>
+          ここまでは物体1つの話でした。<br />
+          ここに第三法則（作用・反作用）を組み合わせると、もっと強い道具が手に入ります。
+        </p>
+
+        <p>
+          衝突する2つの物体を考えます。<strong>物体1が物体2から受ける力</strong>を <math><mrow><msub><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mrow><mn>1</mn><mn>2</mn></mrow></msub></mrow></math> 、<strong>物体2が物体1から受ける力</strong>を <math><mrow><msub><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mrow><mn>2</mn><mn>1</mn></mrow></msub></mrow></math> と書きましょう。<br />
+          第三法則は「大きさが等しく向きが逆」と言っています。式にすると、こうです。
+        </p>
+
+        <div class="p-math">
+          <math display="block">
+            <mrow><msub><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mrow><mn>1</mn><mn>2</mn></mrow></msub><mo>=</mo><mo>−</mo><msub><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mrow><mn>2</mn><mn>1</mn></mrow></msub></mrow>
+          </math>
+          <p class="p-math__note">第三法則。移項すれば <math><mrow><msub><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mrow><mn>1</mn><mn>2</mn></mrow></msub><mo>+</mo><msub><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mrow><mn>2</mn><mn>1</mn></mrow></msub><mo>=</mo><mn>0</mn></mrow></math> 、つまり2つを足すと必ず消える。</p>
+        </div>
+
+        <p>
+          次に、2つの物体それぞれについて、さきほどの力積の式を書きます。<br />
+          衝突のあいだ、互いに及ぼし合うこの力のほかに力は働いていないものとします。
+        </p>
+
+        <div class="p-math">
+          <math display="block">
+            <mrow><msubsup><mo>∫</mo><msub><mi>t</mi><mn>1</mn></msub><msub><mi>t</mi><mn>2</mn></msub></msubsup><msub><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mrow><mn>1</mn><mn>2</mn></mrow></msub><mspace width="0.2em" /><mi>d</mi><mi>t</mi><mo>=</mo><mi mathvariant="normal">Δ</mi><msub><mover accent="true"><mi>p</mi><mo stretchy="false">→</mo></mover><mn>1</mn></msub></mrow>
+          </math>
+          <math display="block">
+            <mrow><msubsup><mo>∫</mo><msub><mi>t</mi><mn>1</mn></msub><msub><mi>t</mi><mn>2</mn></msub></msubsup><msub><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mrow><mn>2</mn><mn>1</mn></mrow></msub><mspace width="0.2em" /><mi>d</mi><mi>t</mi><mo>=</mo><mi mathvariant="normal">Δ</mi><msub><mover accent="true"><mi>p</mi><mo stretchy="false">→</mo></mover><mn>2</mn></msub></mrow>
+          </math>
+          <p class="p-math__note">物体1と物体2、それぞれの力積と運動量の変化。</p>
+        </div>
+
+        <p>
+          この2つを<strong>辺々足します</strong>。左辺どうし、右辺どうしを足すだけです。
+        </p>
+
+        <div class="p-math">
+          <math display="block">
+            <mtable columnalign="right center left">
+              <mtr>
+                <mtd><mrow><mi mathvariant="normal">Δ</mi><msub><mover accent="true"><mi>p</mi><mo stretchy="false">→</mo></mover><mn>1</mn></msub><mo>+</mo><mi mathvariant="normal">Δ</mi><msub><mover accent="true"><mi>p</mi><mo stretchy="false">→</mo></mover><mn>2</mn></msub></mrow></mtd>
+                <mtd><mo>=</mo></mtd>
+                <mtd><mrow><msubsup><mo>∫</mo><msub><mi>t</mi><mn>1</mn></msub><msub><mi>t</mi><mn>2</mn></msub></msubsup><mo>(</mo><msub><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mrow><mn>1</mn><mn>2</mn></mrow></msub><mo>+</mo><msub><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mrow><mn>2</mn><mn>1</mn></mrow></msub><mo>)</mo><mspace width="0.2em" /><mi>d</mi><mi>t</mi></mrow></mtd>
+              </mtr>
+              <mtr>
+                <mtd></mtd>
+                <mtd><mo>=</mo></mtd>
+                <mtd><mrow><msubsup><mo>∫</mo><msub><mi>t</mi><mn>1</mn></msub><msub><mi>t</mi><mn>2</mn></msub></msubsup><mn>0</mn><mspace width="0.2em" /><mi>d</mi><mi>t</mi></mrow></mtd>
+              </mtr>
+              <mtr>
+                <mtd></mtd>
+                <mtd><mo>=</mo></mtd>
+                <mtd><mn>0</mn></mtd>
+              </mtr>
+            </mtable>
+          </math>
+          <p class="p-math__note">第三法則より積分の中身が常にゼロ。だから積分もゼロ。</p>
+        </div>
+
+        <p>
+          ここが効きどころです。<br />
+          <math><mrow><msub><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mrow><mn>1</mn><mn>2</mn></mrow></msub></mrow></math> も <math><mrow><msub><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mrow><mn>2</mn><mn>1</mn></mrow></msub></mrow></math> も、衝突のあいだ時々刻々とんでもない変化をしています。それでも<strong>和は常にゼロ</strong>なので、どんな変化をしたかを一切知らなくても、積分の結果はゼロだと言い切れます。
+        </p>
+
+        <p>
+          あとは <math><mrow><mi mathvariant="normal">Δ</mi><mi>X</mi></mrow></math> が「後 − 前」であることを思い出すだけです。
+        </p>
+
+        <div class="p-math">
+          <math display="block">
+            <mrow><mi mathvariant="normal">Δ</mi><mo>(</mo><msub><mover accent="true"><mi>p</mi><mo stretchy="false">→</mo></mover><mn>1</mn></msub><mo>+</mo><msub><mover accent="true"><mi>p</mi><mo stretchy="false">→</mo></mover><mn>2</mn></msub><mo>)</mo><mo>=</mo><mn>0</mn></mrow>
+          </math>
+          <math display="block">
+            <mrow>
+              <msub><mi>m</mi><mn>1</mn></msub><msub><mover accent="true"><mi>v</mi><mo stretchy="false">→</mo></mover><mn>1</mn></msub><mo>+</mo><msub><mi>m</mi><mn>2</mn></msub><msub><mover accent="true"><mi>v</mi><mo stretchy="false">→</mo></mover><mn>2</mn></msub>
+              <mo>=</mo>
+              <msub><mi>m</mi><mn>1</mn></msub><msubsup><mover accent="true"><mi>v</mi><mo stretchy="false">→</mo></mover><mn>1</mn><mo>′</mo></msubsup>
+              <mo>+</mo>
+              <msub><mi>m</mi><mn>2</mn></msub><msubsup><mover accent="true"><mi>v</mi><mo stretchy="false">→</mo></mover><mn>2</mn><mo>′</mo></msubsup>
+            </mrow>
+          </math>
+          <p class="p-math__note">運動量保存則。プライムは衝突後の速度。</p>
+        </div>
+
+        <p>
+          衝突中の力がどれだけぐちゃぐちゃに変化しても、<strong>衝突前後で運動量の合計は変わらない</strong>。<br />
+          第二法則だけでは手も足も出なかった問題が、第三法則を一度使うだけで解けてしまいました。
+        </p>
+
+        <p>
+          ただし、途中で「互いに及ぼし合う力のほかに力は働いていない」と置いたことを忘れないでください。<br />
+          外から別の力が入ってくると、積分の中身はゼロになりません。どこまでを「2つの物体」と見なすか次第で、結論が変わります。
+        </p>
+
+        <div class="p-column">
+          <p class="p-column__title">【コラム】摩擦で止まった運動量は、どこへ行ったのか</p>
+          <p>
+            床を滑って摩擦力で止まった物体は、運動量がゼロになります。一見すると、運動量が消えて保存していないように見えます。
+          </p>
+          <p>
+            けれど「物体＋地球」をセットで1つのグループとして見ると、物体が減速した分、地球が反作用を受けてごく微小に加速しています。<br />
+            地球も含めた宇宙全体で見れば、運動量は完璧に保存されています。
+          </p>
+          <p>
+            保存則は、外から力が入ってこない系（孤立系）に対して成り立つ主張です。したがって「保存するか」という問いには、<strong>「どこに線を引いたか」を答えないと意味がありません。</strong>
+          </p>
+        </div>
+
+        <h3>もう一段の対称性 — 微分してみる</h3>
+
+        <p>
+          ここまでで、力を集める方向は「空間」と「時間」の2つあると分かりました。<br />
+          では逆に、集めたものを<strong>微分する</strong>とどうなるでしょうか。
+        </p>
+
+        <p>
+          ポテンシャル <math><mi>U</mi></math> を<strong>位置</strong>で微分すると、力が出てきます。これは <math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mo>−</mo><mo>∇</mo><mi>U</mi></mrow></math> そのものです。<br />
+          では、運動エネルギー <math><mi>K</mi></math> を<strong>速度</strong>で微分すると、何が出てくるでしょうか。
+        </p>
+
+        <div class="p-math">
+          <math display="block">
+            <mrow>
+              <mfrac><mrow><mi>d</mi><mi>K</mi></mrow><mrow><mi>d</mi><mi>v</mi></mrow></mfrac>
+              <mo>=</mo>
+              <mfrac><mi>d</mi><mrow><mi>d</mi><mi>v</mi></mrow></mfrac>
+              <mrow><mo>(</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mi>m</mi><msup><mi>v</mi><mn>2</mn></msup><mo>)</mo></mrow>
+              <mo>=</mo>
+              <mi>m</mi><mi>v</mi>
+              <mo>=</mo>
+              <mi>p</mi>
+            </mrow>
+          </math>
+          <p class="p-math__note">運動量が、ひょっこり顔を出す。</p>
+        </div>
+
+        <p>
+          並べてみると、きれいに対応しています。
+        </p>
+
+        <ul>
+          <li><strong>位置</strong>で微分する — ポテンシャルから<strong>力</strong>が出る</li>
+          <li><strong>速度</strong>で微分する — 運動エネルギーから<strong>運動量</strong>が出る</li>
+        </ul>
+
+        <p>
+          エネルギーと運動量は、別々に発明された概念ではありませんでした。<strong>切り取る軸が位置か速度かだけが違う、裏表の関係</strong>だったのです。<br />
+          第2章は、まさにこの対称性を出発点にします。
+        </p>
+
+        <h3>第1章のまとめ</h3>
+
+        <figure class="p-figure is-wide">
+          <figcaption class="p-table__caption" id="cap-summary">同じ <math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover></mrow></math> を、何で集めるかだけが違う。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-table-wrap" tabindex="0" role="region" aria-labelledby="cap-summary">
+            <table class="p-table" aria-labelledby="cap-summary">
+              <thead>
+                <tr>
+                  <th scope="col">　</th>
+                  <th scope="col">エネルギー</th>
+                  <th scope="col">運動量</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">集め方</th>
+                  <td>力を距離で集める</td>
+                  <td>力を時間で集める</td>
+                </tr>
+                <tr>
+                  <th scope="row">中間概念</th>
+                  <td>仕事</td>
+                  <td>力積</td>
+                </tr>
+                <tr>
+                  <th scope="row">蓄積される量</th>
+                  <td>運動エネルギー <math><mrow><mi>K</mi><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mi>m</mi><msup><mi>v</mi><mn>2</mn></msup></mrow></math><br />スカラー</td>
+                  <td>運動量 <math><mrow><mover accent="true"><mi>p</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>v</mi><mo stretchy="false">→</mo></mover></mrow></math><br />ベクトル</td>
+                </tr>
+                <tr>
+                  <th scope="row">得られる保存則</th>
+                  <td>力学的エネルギー保存則</td>
+                  <td>運動量保存則</td>
+                </tr>
+                <tr>
+                  <th scope="row">使う場面</th>
+                  <td>坂道や振り子など、位置で力が決まるとき</td>
+                  <td>衝突や爆発など、時間が短く力が複雑なとき</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </figure>
+
+        <p>
+          第一法則が舞台を用意し、第二法則が瞬間の因果を書く。そして第二法則を距離で集めるとエネルギーが、時間で集めると運動量が出てくる。<br />
+          <strong>エネルギーも運動量も、新しい法則ではなく <math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover></mrow></math> の積分形です。</strong>
+        </p>
+
+        <h3>未来は決まってしまう — ラプラスの悪魔へ</h3>
+
+        <p>
+          ここまでの道具を並べると、ニュートン力学が何を主張しているのかが見えてきます。
+        </p>
+
+        <p>
+          運動方程式は加速度、つまり位置の2階微分についての式です。<br />
+          2階の微分方程式を解くには、初期条件が2つ要ります。その2つが<strong>位置と速度（運動量）</strong>でした。
+        </p>
+
+        <p>
+          ある瞬間の位置と運動量が与えられたとしましょう。力が位置と速度で決まる形をしていれば、その瞬間の力が決まります。力が決まれば加速度が決まり、ごくわずかな時間だけ進めた先の速度と位置が決まる。そして新しい位置と速度から、また次の瞬間が決まる。<br />
+          この手順を繰り返せば、いくらでも先まで追いかけられます。
+        </p>
+
+        <p>
+          コンピュータで惑星の軌道や建物の揺れをシミュレーションしているのは、まさにこの繰り返しです。<br />
+          しかも摩擦のような散逸がなければ、運動方程式は時間の向きを反転しても形が変わりません。同じ手続きを逆に回せば、<strong>過去も復元できます</strong>。
+        </p>
+
+        <p>
+          つまりニュートン力学は、こう言っているのです。<br />
+          <strong>位置と運動量という2つの数さえ与えれば、その物体の未来も過去もすべて決まっている。</strong>
+        </p>
+
+        <p>
+          これを1個の物体ではなく、宇宙にあるすべての粒子について同時にやったらどうなるか。<br />
+          それが序章で見た<a href="/physics/prologue/#laplace">ラプラスの悪魔</a>です。第1章で手に入れた「位置と運動量」という組は、あの知性が要求した入力そのものでした。
+        </p>
+
+        <h3>そして、力は消えていく</h3>
+
+        <p>
+          注目してほしいのは、ここで力が2回も姿を消していることです。<br />
+          ポテンシャルに集めれば力そのものが <math><mi>U</mi></math> の傾きとして書き換わり、力積に集めれば力の時間変化が消える。物理学は、扱いにくい「瞬間の力」から少しずつ距離を取ろうとしています。
+        </p>
+
+        <p>
+          次の章では、この流れが行き着くところまで行きます。<br />
+          ラグランジュは、運動エネルギーとポテンシャルエネルギーという2つのスカラー量だけを使い、<strong>力を一度も書かずに</strong>運動方程式を導いてしまいます。
+        </p>
+      </section>
+
+      <div class="p-next">
+        <p class="p-next__label">次の章</p>
+        <p class="p-next__title">
+          第2章　解析力学 — エネルギーから運動を求める<span class="p-status">準備中</span>
+        </p>
+        <p class="p-next__desc">
+          ボールは投げられたから飛ぶのではない。「一番マシな道」を選んで飛んでいる。<br />
+          最小作用の原理から運動方程式を導き直します。
+        </p>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<footer class="l-footer">
+  <div class="l-container">
+    <p>mutexn</p>
+  </div>
+</footer>
+
+</body>
+</html>

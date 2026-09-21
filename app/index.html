@@ -99,10 +99,28 @@
     border-radius: 8px;
   }
 
-  /* ----- メインエリア ----- */
+  /* ----- メインエリア -----
+     DADS: メインエリア自体をクリッカブルエリア（フォーカス可能エリア）にできる。
+     その場合、メインエリア内に別のリンクを置いてはいけない。
+     サブエリアのリンクリストはこの外なので影響しない
+     （サブエリア自体をクリッカブルにすることは DADS が禁じている） */
   .p-card__main {
+    display: block;
     flex: 1;
     padding: 20px;
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+  /* カードのどこにポインタがあってもリンクとして反応することを、外周でも示す。
+     :has() が使えない環境でもタイトルの下線が太くなるので手がかりは残る */
+  .p-card:has(.p-card__main:hover) { border-color: var(--gray-900); }
+
+  /* 大きな領域がフォーカス可能なので、全面を黄色で塗らずリング状の2重構造にする */
+  .p-card__main:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    background-color: var(--white);
+    box-shadow: 0 0 0 4px var(--focus-yellow);
   }
 
   /* ラベル（形式・分量）: Std-16N-170 */
@@ -114,23 +132,22 @@
     font-feature-settings: 'palt';
   }
 
-  /* タイトル: Std-20B-150。リンクなのでアンダーラインを付与する */
+  /* タイトル: Std-20B-150。
+     DADS: メインエリア自体がリンクの場合もタイトルにアンダーラインを付与する */
   .p-card__title {
     font-size: 20px;
     font-weight: 700;
     line-height: 1.5;
     letter-spacing: 0.02em;
     margin: 0 0 12px;
-  }
-  .p-card__title a {
     color: var(--link);
     text-decoration: underline;
     text-underline-offset: 0.2em;
     text-decoration-thickness: 1px;
   }
-  .p-card__title a:visited { color: var(--link-visited); }
-  .p-card__title a:hover { text-decoration-thickness: 3px; }
-  .p-card__title a:active { color: var(--link-active); }
+  .p-card__main:visited .p-card__title { color: var(--link-visited); }
+  .p-card__main:hover .p-card__title { text-decoration-thickness: 3px; }
+  .p-card__main:active .p-card__title { color: var(--link-active); }
 
   /* コンテンツ: Std-16N-170 */
   .p-card__desc {
@@ -214,39 +231,53 @@
 
     <h1>目次</h1>
 
-    <p class="p-lead">
-      学んだことを置いています。
-    </p>
+    <p class="p-lead">学んだことを置いています。</p>
 
     <ul class="p-grid">
 
       <li>
         <article class="p-card">
-          <div class="p-card__main">
-            <p class="p-card__label">読み物・全9章</p>
-            <h2 class="p-card__title">
-              <a href="/web-history/">Web技術開発史 — ボトルネックと抽象化の叙事詩</a>
-            </h2>
+          <a class="p-card__main" href="/physics/" aria-labelledby="card-physics">
+            <p class="p-card__label">読み物・序章＋全3章（序章・第1章 公開）</p>
+            <h2 class="p-card__title" id="card-physics">物理学のストーリー — ニュートンから量子力学へ</h2>
             <p class="p-card__desc">
-              1945年のハイパーテキスト構想から、CGI、LAMP、Ajax、React、Next.js、そしてWebAssemblyまで。
-              各時代が抱えた構造的な限界と、それを解いた抽象化を順に追う。
+              高校物理の F=ma から、解析力学の最小作用の原理、量子力学の経路積分まで。<br />
+              同じ放物線が3通りに説明されていく道筋を追う。
             </p>
+          </a>
+          <div class="p-card__sub">
+            <p class="p-card__sub-title">章</p>
+            <ul class="p-card__links">
+              <li><a href="/physics/prologue/">序章 物理学は、一度完成した</a></li>
+              <li><a href="/physics/newton/">第1章 ニュートン力学</a></li>
+            </ul>
           </div>
         </article>
       </li>
 
       <li>
         <article class="p-card">
-          <div class="p-card__main">
-            <p class="p-card__label">スライド・全19枚</p>
-            <h2 class="p-card__title">
-              <a href="/jamstack-history/">Jamstackと、その先のWeb</a>
-            </h2>
+          <a class="p-card__main" href="/web-history/" aria-labelledby="card-web-history">
+            <p class="p-card__label">読み物・全9章</p>
+            <h2 class="p-card__title" id="card-web-history">Web技術開発史 — ボトルネックと抽象化の叙事詩</h2>
             <p class="p-card__desc">
-              WordPress時代の限界からJamstackの誕生、定義の拡張、そしてNext.js以降に残された課題まで。
+              1945年のハイパーテキスト構想から、CGI、LAMP、Ajax、React、Next.js、そしてWebAssemblyまで。<br />
+              各時代が抱えた構造的な限界と、それを解いた抽象化を順に追う。
+            </p>
+          </a>
+        </article>
+      </li>
+
+      <li>
+        <article class="p-card">
+          <a class="p-card__main" href="/jamstack-history/" aria-labelledby="card-jamstack">
+            <p class="p-card__label">スライド・全19枚</p>
+            <h2 class="p-card__title" id="card-jamstack">Jamstackと、その先のWeb</h2>
+            <p class="p-card__desc">
+              WordPress時代の限界からJamstackの誕生、定義の拡張、そしてNext.js以降に残された課題まで。<br />
               WebAssemblyとマルチランタイムに至る現在地を概観する。
             </p>
-          </div>
+          </a>
           <!-- 子ページがある場合は、この位置にサブエリアを置く
           <div class="p-card__sub">
             <p class="p-card__sub-title">関連ページ</p>

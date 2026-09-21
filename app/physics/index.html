@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>物理学のストーリー — ニュートンから量子力学へ</title>
+<meta name="description" content="高校物理の F=ma から、解析力学の最小作用の原理、量子力学の経路積分まで。物理学の視点が 3 回引っ越す道筋をたどる読み物。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  /* =======================================================================
+     デジタル庁デザインシステム（DADS）準拠
+     カラー値の出典: @digital-go-jp/design-tokens v2.0.1
+     トークンと l- / p- の命名は app/index.html に揃える
+     ======================================================================= */
+  :root {
+    --white: #ffffff;
+    --gray-50: #f2f2f2;
+    --gray-420: #949494;   /* 対白 3.03:1  非テキスト下限 */
+    --gray-536: #767676;   /* 対白 4.54:1  テキスト下限 */
+    --gray-800: #333333;   /* 対白 12.63:1 */
+    --gray-900: #1a1a1a;   /* 対白 17.40:1 */
+    --black: #000000;
+    --link: #0017c1;           /* blue-900     対白 11.10:1 */
+    --link-visited: #8b008b;   /* magenta-900  対白  8.50:1 */
+    --link-active: #ac3e00;    /* orange-900   対白  6.10:1 */
+    --focus-yellow: #ffd43d;   /* yellow-300   フォーカス（変更禁止） */
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--white);
+    color: var(--gray-900);
+    /* Std-17N-170 */
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 17px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+  }
+
+  /* ----- フォーカスインジケーター: Yellow-300 と Black の2重構造 ----- */
+  a:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 2px;
+    background-color: var(--focus-yellow);
+    color: var(--gray-900);
+    box-shadow: 0 0 0 2px var(--focus-yellow);
+    text-decoration-color: var(--gray-900);
+  }
+
+  /* ----- レイアウト ----- */
+  .l-container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .l-main { padding: 24px 0 80px; }
+
+  /* ----- パンくず -----
+     DADS components/breadcrumb: ヘッダーとページ見出しの間に置き、
+     コンテンツ幅を超える場合は改行する */
+  .l-breadcrumb {
+    padding: 24px 0 0;
+    /* Std-16N-170 */
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-breadcrumb ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 8px;
+  }
+  .l-breadcrumb li { display: flex; align-items: center; gap: 8px; }
+  .l-breadcrumb li + li::before { content: '\203A'; color: var(--gray-536); }
+
+  /* ----- 本文カラム -----
+     DADS foundations/layout のカラムオフセットに倣い、読み物は幅を絞る */
+  .p-prose { max-width: 720px; }
+
+  /* Std-45B-140 */
+  h1 {
+    font-size: 45px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0;
+    margin: 0 0 8px;
+  }
+  /* Std-24N-150 */
+  .p-subtitle {
+    margin: 0 0 24px;
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+
+  .p-prose p { margin: 0 0 20px; }
+  .p-prose > p:last-child { margin-bottom: 0; }
+
+  /* Std-32B-150 */
+  .p-prose h2 {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    margin: 64px 0 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gray-420);
+  }
+
+  /* ----- 本文中のリンク: 色以外にも下線で示す ----- */
+  .p-prose a, .l-breadcrumb a {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  .p-prose a:visited, .l-breadcrumb a:visited { color: var(--link-visited); }
+  .p-prose a:hover, .l-breadcrumb a:hover { text-decoration-thickness: 3px; }
+  .p-prose a:active, .l-breadcrumb a:active { color: var(--link-active); }
+
+  /* ----- 章ナビゲーション ----- */
+  .p-chapters {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 16px;
+  }
+  /* .p-prose a の下線・色は本文中のテキストリンク用。
+     ブロック全体を包むリンクには効かせない（下線はタイトルだけに付ける） */
+  .p-prose a.p-chapter {
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+
+  /* DADS: コンテナ自体をクリッカブルエリア（フォーカス可能エリア）にできる。
+     その場合、コンテナ内に別のリンクを置いてはいけない */
+  .p-chapter {
+    display: block;
+    padding: 20px;
+    background: var(--white);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+  a.p-chapter:hover { border-color: var(--gray-900); }
+  /* 大きな領域がフォーカス可能なので、全面を黄色で塗らずリング状の2重構造にする */
+  a.p-chapter:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    background-color: var(--white);
+    box-shadow: 0 0 0 4px var(--focus-yellow);
+  }
+  /* 未公開の章。リンクを張らず、状態をテキストでも示す */
+  .p-chapter.is-upcoming { background: var(--gray-50); }
+  /* gray-50 の上では gray-536 が 4.06:1 でテキスト下限に届かないため一段濃くする */
+  .p-chapter.is-upcoming .p-chapter__label { color: var(--gray-800); }  /* 対 gray-50 11.29:1 */
+  .p-chapter__label {
+    margin: 0 0 4px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+    font-feature-settings: 'palt';
+  }
+  /* Std-20B-150。
+     DADS: コンテナ自体がリンクの場合もタイトルにアンダーラインを付与する */
+  .p-chapter__title {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+  a.p-chapter .p-chapter__title {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  a.p-chapter:visited .p-chapter__title { color: var(--link-visited); }
+  a.p-chapter:hover .p-chapter__title { text-decoration-thickness: 3px; }
+  a.p-chapter:active .p-chapter__title { color: var(--link-active); }
+  .p-chapter__desc {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+  }
+  /* 状態チップ。gray-50 の上に載るので文字は gray-800（対 gray-50 11.29:1）、
+     枠は gray-536（対 gray-50 4.06:1 で非テキスト下限 3:1 を満たす） */
+  .p-status {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 0 8px;
+    border: 1px solid var(--gray-536);
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+    vertical-align: middle;
+  }
+
+  /* ----- 数式（MathML）-----
+     ライブラリを使わずブラウザ内蔵の描画に任せる。
+     数式フォントはいずれもローカル。外部リソースを増やさない */
+  math {
+    font-family: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', 'Noto Sans Math', serif;
+  }
+
+  /* ----- フッター ----- */
+  .l-footer {
+    border-top: 1px solid var(--gray-420);
+    padding: 24px 0 40px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-footer p { margin: 0; }
+
+  /* ----- モバイル・タブレット: 768px 未満 ----- */
+  @media (max-width: 767px) {
+    body {
+      /* Std-16N-175 */
+      font-size: 16px;
+      line-height: 1.75;
+    }
+    .l-container { padding: 0 16px; }
+    .l-main { padding: 16px 0 56px; }
+    .l-breadcrumb { padding-top: 16px; }
+    /* Std-32B-150 */
+    h1 {
+      font-size: 32px;
+      line-height: 1.5;
+      letter-spacing: 0.01em;
+    }
+    /* Std-20N-150 */
+    .p-subtitle {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+    /* Std-28B-150 */
+    .p-prose h2 {
+      font-size: 28px;
+      margin-top: 48px;
+    }
+    .p-chapter { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="l-breadcrumb" aria-label="パンくず">
+  <div class="l-container">
+    <ol>
+      <li><a href="/">目次</a></li>
+      <li aria-current="page">物理学のストーリー</li>
+    </ol>
+  </div>
+</nav>
+
+<main class="l-main">
+  <div class="l-container">
+    <div class="p-prose">
+
+      <h1>物理学のストーリー</h1>
+      <p class="p-subtitle">ニュートンから量子力学へ</p>
+
+      <p>
+        高校物理で習った <math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover></mrow></math> は、間違っていません。むしろ正しすぎるほど正しい。<br />
+        にもかかわらず物理学は、この式の上に解析力学を積み、さらにその上に量子力学を積みました。
+      </p>
+
+      <p>
+        なぜそんなことをしたのか。<br />
+        理由をたどっていくと、物理学は「公式の一覧」ではなく、<strong>一本の物語</strong>として読めるようになります。ニュートンからラプラスの悪魔を経て、ファインマンに至る物語です。
+      </p>
+
+      <h2>章</h2>
+
+      <ul class="p-chapters">
+        <li>
+          <a class="p-chapter" href="/physics/prologue/" aria-labelledby="ch-prologue">
+            <p class="p-chapter__label">序章</p>
+            <h3 class="p-chapter__title" id="ch-prologue">物理学は、一度完成した</h3>
+            <p class="p-chapter__desc">
+              『プリンキピア』から海王星の発見まで、力学は予言の道具になった。その行き着く先がラプラスの悪魔である。<br />
+              完成したはずの力学に、なぜ続きがあるのか。全体の見取り図をここで描く。
+            </p>
+          </a>
+        </li>
+        <li>
+          <a class="p-chapter" href="/physics/newton/" aria-labelledby="ch-newton">
+            <p class="p-chapter__label">第1章</p>
+            <h3 class="p-chapter__title" id="ch-newton">ニュートン力学 — 力から運動を求める</h3>
+            <p class="p-chapter__desc">
+              原理として覚えるべきなのは3法則だけで、高校力学の大部分はその事例集である。<br />
+              第一法則が計算の「舞台」を決め、第二法則を空間と時間で集めるとエネルギーと運動量が出てくる。
+            </p>
+          </a>
+        </li>
+        <li>
+          <div class="p-chapter is-upcoming">
+            <p class="p-chapter__label">第2章</p>
+            <h3 class="p-chapter__title">
+              解析力学 — エネルギーから運動を求める<span class="p-status">準備中</span>
+            </h3>
+            <p class="p-chapter__desc">
+              ボールは投げられたから飛ぶのではなく、「一番マシな道」を選んで飛んでいる。<br />
+              最小作用の原理から運動方程式を導き直し、位置と運動量を対等に扱う相空間まで進む。
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="p-chapter is-upcoming">
+            <p class="p-chapter__label">第3章</p>
+            <h3 class="p-chapter__title">
+              量子力学 — 波の重ね合わせから運動を求める<span class="p-status">準備中</span>
+            </h3>
+            <p class="p-chapter__desc">
+              なぜ粒子は、作用が最小になる経路をあらかじめ知っているのか。<br />
+              経路積分がこの問いに答え、ニュートン力学が「波の干渉が残した影」だったことが分かる。
+            </p>
+          </div>
+        </li>
+      </ul>
+
+    </div>
+  </div>
+</main>
+
+<footer class="l-footer">
+  <div class="l-container">
+    <p>mutexn</p>
+  </div>
+</footer>
+
+</body>
+</html>
