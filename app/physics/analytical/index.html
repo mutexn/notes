@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>第2章 解析力学 — エネルギーから運動を求める</title>
+<meta name="description" content="力という主役を降ろし、エネルギーと運動量で運動を書き直す。一般化座標で拘束力を消し、最小作用の原理からオイラー＝ラグランジュ方程式へ。そして相空間と正準方程式まで。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  /* =======================================================================
+     デジタル庁デザインシステム（DADS）準拠
+     カラー値の出典: @digital-go-jp/design-tokens v2.0.1
+     トークンと l- / p- の命名は app/index.html に揃える
+     ======================================================================= */
+  :root {
+    --white: #ffffff;
+    --gray-50: #f2f2f2;
+    --gray-420: #949494;   /* 対白 3.03:1  非テキスト下限 */
+    --gray-536: #767676;   /* 対白 4.54:1  テキスト下限 */
+    --gray-800: #333333;   /* 対白 12.63:1 */
+    --gray-900: #1a1a1a;   /* 対白 17.40:1 */
+    --black: #000000;
+    --link: #0017c1;           /* blue-900     対白 11.10:1 */
+    --link-visited: #8b008b;   /* magenta-900  対白  8.50:1 */
+    --link-active: #ac3e00;    /* orange-900   対白  6.10:1 */
+    --focus-yellow: #ffd43d;   /* yellow-300   フォーカス（変更禁止） */
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--white);
+    color: var(--gray-900);
+    /* Std-17N-170 */
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 17px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+  }
+
+  /* ----- フォーカスインジケーター: Yellow-300 と Black の2重構造 ----- */
+  a:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 2px;
+    background-color: var(--focus-yellow);
+    color: var(--gray-900);
+    box-shadow: 0 0 0 2px var(--focus-yellow);
+    text-decoration-color: var(--gray-900);
+  }
+
+  /* ----- レイアウト ----- */
+  .l-container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .l-main { padding: 24px 0 80px; }
+
+  /* ----- パンくず -----
+     DADS components/breadcrumb: ヘッダーとページ見出しの間に置き、
+     コンテンツ幅を超える場合は改行する */
+  .l-breadcrumb {
+    padding: 24px 0 0;
+    /* Std-16N-170 */
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-breadcrumb ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 8px;
+  }
+  .l-breadcrumb li { display: flex; align-items: center; gap: 8px; }
+  .l-breadcrumb li + li::before { content: '\203A'; color: var(--gray-536); }
+
+  /* ----- 本文カラム -----
+     DADS foundations/layout のカラムオフセットに倣い、読み物は幅を絞る */
+  .p-prose { max-width: 720px; }
+
+  /* Std-45B-140 */
+  h1 {
+    font-size: 45px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0;
+    margin: 0 0 8px;
+  }
+  /* Std-24N-150 */
+  .p-subtitle {
+    margin: 0 0 24px;
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+
+  .p-prose p { margin: 0 0 20px; }
+  .p-prose ul { margin: 0 0 20px; padding-left: 1.6em; }
+  .p-prose li { margin-bottom: 8px; }
+
+  /* Std-32B-150 */
+  .p-prose h2 {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    margin: 0 0 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gray-420);
+  }
+  /* 節番号。見出しの上に小さく置く: Std-16N-170 */
+  .p-prose h2 .p-secnum {
+    display: block;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-536);
+  }
+  /* Std-24B-150 */
+  .p-prose h3 {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    margin: 40px 0 12px;
+  }
+
+  /* 節。次の節との間をしっかり空ける */
+  .p-section { margin-top: 64px; }
+
+  /* キャッチコピー: Std-20N-150 */
+  .p-catch {
+    margin: 0 0 24px;
+    font-size: 20px;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+
+  /* ----- 本文中のリンク: 色以外にも下線で示す ----- */
+  .p-prose a, .l-breadcrumb a {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  .p-prose a:visited, .l-breadcrumb a:visited { color: var(--link-visited); }
+  .p-prose a:hover, .l-breadcrumb a:hover { text-decoration-thickness: 3px; }
+  .p-prose a:active, .l-breadcrumb a:active { color: var(--link-active); }
+
+  /* ----- ページ内目次 ----- */
+  .p-toc {
+    margin: 0 0 8px;
+    padding: 20px 24px;
+    background: var(--white);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+  }
+  .p-toc__title {
+    margin: 0 0 8px;
+    /* Std-16B-170 */
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+  .p-toc ol {
+    margin: 0;
+    padding-left: 1.4em;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .p-toc li { margin-bottom: 4px; }
+  .p-toc li:last-child { margin-bottom: 0; }
+
+  /* ----- 問い・コラム・一歩先の視点 -----
+     DADS の注釈ブロックは「補足情報」のためのコンポーネントで、
+     コラムのように文脈を切り替える目的には使ってはいけないと規定されている。
+     よって注釈ブロックを流用せず、独自のブロックとして組む。
+     境界は影ではなく罫線で示す（--gray-420 / --link はいずれも対白 3:1 以上） */
+  .p-question, .p-column, .p-aside {
+    margin: 32px 0;
+    padding: 20px 24px;
+    background: var(--gray-50);
+    border-left: 4px solid var(--gray-420);
+  }
+  .p-question { border-left-color: var(--link); }
+  /* Std-18B-160 */
+  .p-question__title, .p-column__title, .p-aside__title {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+  }
+  .p-question p, .p-column p, .p-aside p { margin: 0 0 16px; }
+  .p-question p:last-child, .p-column p:last-child, .p-aside p:last-child { margin-bottom: 0; }
+
+  /* ----- 数式（MathML）-----
+     ライブラリを使わずブラウザ内蔵の描画に任せる。
+     数式フォントはいずれもローカル。外部リソースを増やさない */
+  math {
+    font-family: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', 'Noto Sans Math', serif;
+  }
+  /* 独立した式。狭い画面で溢れたら横スクロールで救う */
+  .p-math {
+    margin: 24px 0;
+    padding: 16px 20px;
+    overflow-x: auto;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-420);
+    border-radius: 4px;
+  }
+  .p-math math { font-size: 20px; }
+  /* 式変形を縦に並べるとき、等号の位置を揃える。
+     MathML Core は mtable の columnalign を解釈しないので CSS で指定する
+     （左辺は右寄せ、等号は中央、右辺は左寄せ） */
+  .p-math mtd { text-align: center; }
+  /* mtable のセルは既定で行内サイズ（分数や積分記号が縮む）になるので、
+     独立した式と同じ大きさで組む */
+  .p-math mtd { math-style: normal; }
+  .p-math mtd:nth-child(1) { text-align: right; }
+  .p-math mtd:nth-child(3) { text-align: left; }
+  /* 式に添える注記: Std-16N-170。gray-50 の上なので gray-800（11.29:1） */
+  .p-math__note {
+    margin: 8px 0 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+    text-align: center;
+  }
+
+  /* ----- 対比表 -----
+     DADS: 高密度用途の行高は 130%（Dns-16N-130） */
+  /* 横スクロールする領域はキーボードでも操作できる必要があるため、
+     マークアップ側で tabindex="0" と role="region" を付けている */
+  .p-table-wrap { margin: 0; overflow-x: auto; }
+  .p-table-wrap:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    box-shadow: 0 0 0 4px var(--focus-yellow);
+  }
+  .p-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+    line-height: 1.3;
+    letter-spacing: 0;
+  }
+  /* 見出しセルの背景が gray-50 のため、罫線は gray-420（対 gray-50 2.71:1）では
+     非テキスト下限 3:1 に届かない。gray-536（同 4.06:1）を使う */
+  .p-table th, .p-table td {
+    padding: 12px;
+    border: 1px solid var(--gray-536);
+    text-align: left;
+    vertical-align: top;
+  }
+  /* 表とその説明。説明は横スクロール領域の外に置く（中に入れると一緒に流れて切れる） */
+  .p-figure { margin: 24px 0; }
+  /* Std-16N-170 */
+  .p-table__caption {
+    margin: 0 0 8px;
+    font-size: 16px;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-536);
+    text-align: left;
+  }
+  /* 横スクロールの手がかり。スクロールが起きる幅でだけ出す */
+  .p-table__hint { display: none; }
+  .p-table thead th {
+    background: var(--gray-50);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .p-table tbody th {
+    background: var(--gray-50);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* .p-prose a の下線・色は本文中のテキストリンク用。
+     ブロック全体を包むリンクには効かせない（下線はタイトルだけに付ける） */
+  .p-prose a.p-next {
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+
+  /* ----- 次章への導線 -----
+     DADS: コンテナ自体をクリッカブルエリア（フォーカス可能エリア）にできる。
+     その場合、コンテナ内に別のリンクを置いてはいけない */
+  .p-next {
+    display: block;
+    margin-top: 64px;
+    padding: 20px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+  a.p-next:hover { border-color: var(--gray-900); }
+  /* 大きな領域がフォーカス可能なので、全面を黄色で塗らずリング状の2重構造にする */
+  a.p-next:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    background-color: var(--gray-50);
+    box-shadow: 0 0 0 4px var(--focus-yellow);
+  }
+  /* gray-50 の上に載るので gray-800（11.29:1） */
+  .p-next__label {
+    margin: 0 0 4px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+    font-feature-settings: 'palt';
+  }
+  /* Std-20B-150。
+     DADS: コンテナ自体がリンクの場合もタイトルにアンダーラインを付与する */
+  .p-next__title {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+  a.p-next .p-next__title {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  a.p-next:visited .p-next__title { color: var(--link-visited); }
+  a.p-next:hover .p-next__title { text-decoration-thickness: 3px; }
+  a.p-next:active .p-next__title { color: var(--link-active); }
+  .p-next__desc {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+  }
+  .p-status {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 0 8px;
+    border: 1px solid var(--gray-536);
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+    vertical-align: middle;
+  }
+
+  /* ----- 2つの形式（ラグランジュ / ハミルトン）-----
+     囲みではなく罫線で区切る。序章の「3つの視点」と同じ流儀 */
+  .p-forms {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+    border-top: 1px solid var(--gray-420);
+  }
+  /* .p-prose ul の字下げと li の余白は本文の箇条書き用なので打ち消す */
+  .p-prose .p-forms { padding-left: 0; }
+  .p-prose .p-forms > li { margin-bottom: 0; }
+  .p-form {
+    padding: 20px 0;
+    border-bottom: 1px solid var(--gray-420);
+  }
+  /* Std-16N-170 */
+  .p-form__num {
+    margin: 0 0 4px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+    font-feature-settings: 'palt';
+  }
+  /* Std-20B-150 */
+  .p-form__title {
+    margin: 0 0 8px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+  /* Std-16N-170 */
+  .p-form__lead {
+    margin: 0 0 12px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+  }
+  .p-form dl {
+    display: grid;
+    grid-template-columns: 7em 1fr;
+    gap: 4px 16px;
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+  }
+  .p-form dt { font-weight: 700; }
+  .p-form dd { margin: 0; }
+
+  /* ----- ディスクロージャー -----
+     DADS: 展開しなくても地の文だけで必要最低限の情報が伝わる場合にのみ使える。
+     ここは正準方程式の導出（補足）なので条件を満たす。
+     <details> なので JS は不要 */
+  .p-disclosure {
+    margin: 32px 0;
+    background: var(--white);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+  }
+  /* Std-18B-160 */
+  .p-disclosure > summary {
+    padding: 16px 20px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  .p-disclosure > summary:hover { text-decoration-thickness: 3px; }
+  .p-disclosure[open] > summary { border-bottom: 1px solid var(--gray-420); }
+  .p-disclosure > summary:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: -4px;
+    background-color: var(--focus-yellow);
+    color: var(--gray-900);
+    text-decoration-color: var(--gray-900);
+  }
+  .p-disclosure__body { padding: 16px 20px; }
+  .p-disclosure__body > *:first-child { margin-top: 0; }
+  .p-disclosure__body > *:last-child { margin-bottom: 0; }
+
+  /* ----- フッター ----- */
+  .l-footer {
+    border-top: 1px solid var(--gray-420);
+    padding: 24px 0 40px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-footer p { margin: 0; }
+
+  /* ----- モバイル・タブレット: 768px 未満 ----- */
+  @media (max-width: 767px) {
+    body {
+      /* Std-16N-175 */
+      font-size: 16px;
+      line-height: 1.75;
+    }
+    .l-container { padding: 0 16px; }
+    .l-main { padding: 16px 0 56px; }
+    .l-breadcrumb { padding-top: 16px; }
+    /* Std-32B-150 */
+    h1 {
+      font-size: 32px;
+      line-height: 1.5;
+      letter-spacing: 0.01em;
+    }
+    /* Std-20N-150 */
+    .p-subtitle {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+    /* Std-28B-150 */
+    .p-prose h2 { font-size: 28px; }
+    /* Std-22B-150 */
+    .p-prose h3 { font-size: 22px; }
+    .p-section { margin-top: 48px; }
+    /* Std-18N-160 */
+    .p-catch { font-size: 18px; line-height: 1.6; }
+    .p-toc { padding: 16px; }
+    .p-question, .p-column, .p-aside { padding: 16px; }
+    .p-math { padding: 12px; }
+    .p-math math { font-size: 18px; }
+    /* 3列を 375px に詰め込むと1行あたり数文字になって読めない。
+       列の多い表だけ、列幅を確保して横スクロールに切り替える */
+    .p-figure.is-wide .p-table { min-width: 520px; }
+    .p-figure.is-wide .p-table__hint { display: inline; }
+    .p-form { padding: 16px 0; }
+    .p-form dl { grid-template-columns: 1fr; gap: 0; }
+    .p-form dt { margin-top: 8px; }
+    .p-form dt:first-child { margin-top: 0; }
+    .p-disclosure > summary { padding: 12px 16px; }
+    .p-disclosure__body { padding: 12px 16px; }
+    .p-next { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="l-breadcrumb" aria-label="パンくず">
+  <div class="l-container">
+    <ol>
+      <li><a href="/">目次</a></li>
+      <li><a href="/physics/">物理学のストーリー</a></li>
+      <li aria-current="page">第2章 解析力学</li>
+    </ol>
+  </div>
+</nav>
+
+<main class="l-main">
+  <div class="l-container">
+    <div class="p-prose">
+
+      <h1>第2章　解析力学</h1>
+      <p class="p-subtitle">エネルギーから運動を求める</p>
+
+      <p class="p-catch">「力」という主役を降ろし、「エネルギーと運動量」に舞台を渡す。</p>
+
+      <p>
+        ニュートン力学は「力」という直感的な概念で世界を記述しました。<br />
+        解析力学に足を踏み入れると、その力が主役の座を降ります。力は人間に見えていた一側面にすぎず、式の骨格を支えていたのは<strong>エネルギーと運動量</strong>のほうだった——という話です。
+      </p>
+
+      <nav class="p-toc" aria-label="このページの目次">
+        <p class="p-toc__title">このページの内容</p>
+        <ol>
+          <li><a href="#overview">2-0. 解析力学とは何か（思想と2つの形式）</a></li>
+          <li><a href="#least-action">2-1. 最小作用の原理（ラグランジュ形式）</a></li>
+          <li><a href="#phase-space">2-2. 相空間とハミルトニアン（ハミルトン形式）</a></li>
+        </ol>
+      </nav>
+
+      <section class="p-section" id="overview">
+        <h2><span class="p-secnum">2-0</span>解析力学とは何か（思想と2つの形式）</h2>
+
+        <h3>「力」から「エネルギーと運動量」へ</h3>
+
+        <p>
+          第1章で、力の弱点をひとつ見ました。<br />
+          観測者が加速しただけで「見かけの力」が現れ、方程式が壊れる。力は、<strong>どの舞台から見ているかで姿を変えてしまう量</strong>でした。
+        </p>
+
+        <p>
+          解析力学は、この主役を降ろします。代わりに据えるのは、第1章の最後で「裏表の関係」だと分かったエネルギーと運動量です。
+        </p>
+
+        <p>
+          なぜそちらが本質なのか。理由はこの章の後半で出てきます。<br />
+          エネルギーと運動量は、<strong>時空の対称性に裏打ちされた量</strong>だからです。時間をずらしても法則が変わらないからエネルギーが保存し、場所をずらしても変わらないから運動量が保存する。観測者の都合ではなく、世界の側の性質に根を張っています。
+        </p>
+
+        <p>
+          この先の物理学——相対性理論も、量子力学も——では、「力」という言葉はほとんど表に出てきません。<br />
+          解析力学は、その語彙の切り替えが起こる場所です。
+        </p>
+
+        <h3>解析力学の2つの目的</h3>
+
+        <p>
+          思想の話はここまでにして、実務的には2つの解放が起きます。
+        </p>
+
+        <ul>
+          <li><strong>拘束力からの解放</strong> — 糸の張力や面の垂直抗力といった「運動を邪魔するだけの力」を、計算から消す</li>
+          <li><strong>座標軸からの解放</strong> — 直交座標にこだわらず、その運動に一番都合のいい変数を選んで、1本の方程式で処理する</li>
+        </ul>
+
+        <h3>2つの形式 — ラグランジュとハミルトン</h3>
+
+        <p>
+          解析力学は、エネルギーと運動量をどう扱うかで2つの形式に分かれます。<br />
+          どちらが正しいという話ではなく、用途が違います。
+        </p>
+
+        <ul class="p-forms">
+          <li>
+            <div class="p-form">
+              <p class="p-form__num">形式 1 ／ 実用のツール</p>
+              <h4 class="p-form__title">ラグランジュ形式</h4>
+              <p class="p-form__lead">邪魔な力を消して、複雑な運動を最小の計算量で解く。</p>
+              <dl>
+                <dt>目的</dt>
+                <dd>振り子やロボットアームのような、拘束のある運動を解く</dd>
+                <dt>中心の量</dt>
+                <dd>ラグランジアン <math><mrow><mi>L</mi><mo>=</mo><mi>K</mi><mo>−</mo><mi>U</mi></mrow></math>（引き算）</dd>
+                <dt>扱う変数</dt>
+                <dd>一般化座標 <math><mrow><mi>q</mi></mrow></math> と 速度 <math><mrow><mover accent="true"><mi>q</mi><mo>˙</mo></mover></mrow></math></dd>
+              </dl>
+            </div>
+          </li>
+          <li>
+            <div class="p-form">
+              <p class="p-form__num">形式 2 ／ 理論の極致</p>
+              <h4 class="p-form__title">ハミルトン形式</h4>
+              <p class="p-form__lead">位置と運動量を対等に扱い、状態の移り変わりを幾何学として描く。</p>
+              <dl>
+                <dt>目的</dt>
+                <dd>世界の構造を暴き、量子力学へ渡す</dd>
+                <dt>中心の量</dt>
+                <dd>ハミルトニアン <math><mrow><mi>H</mi><mo>=</mo><mi>K</mi><mo>+</mo><mi>U</mi></mrow></math>（足し算）</dd>
+                <dt>扱う変数</dt>
+                <dd>位置 <math><mrow><mi>q</mi></mrow></math> と 運動量 <math><mrow><mi>p</mi></mrow></math></dd>
+              </dl>
+            </div>
+          </li>
+        </ul>
+
+        <figure class="p-figure is-wide">
+          <figcaption class="p-table__caption" id="cap-forms">2つの形式の違い。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-table-wrap" tabindex="0" role="region" aria-labelledby="cap-forms">
+            <table class="p-table" aria-labelledby="cap-forms">
+              <thead>
+                <tr>
+                  <th scope="col">　</th>
+                  <th scope="col">ラグランジュ形式</th>
+                  <th scope="col">ハミルトン形式</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">主な目的</th>
+                  <td>計算の効率化（拘束力を消す）</td>
+                  <td>理論の深掘りと、量子力学への橋渡し</td>
+                </tr>
+                <tr>
+                  <th scope="row">中心となる量</th>
+                  <td><math><mrow><mi>L</mi><mo>=</mo><mi>K</mi><mo>−</mo><mi>U</mi></mrow></math></td>
+                  <td><math><mrow><mi>H</mi><mo>=</mo><mi>K</mi><mo>+</mo><mi>U</mi></mrow></math></td>
+                </tr>
+                <tr>
+                  <th scope="row">扱う変数</th>
+                  <td><math><mrow><mi>q</mi></mrow></math> と <math><mrow><mover accent="true"><mi>q</mi><mo>˙</mo></mover></mrow></math></td>
+                  <td><math><mrow><mi>q</mi></mrow></math> と <math><mrow><mi>p</mi></mrow></math></td>
+                </tr>
+                <tr>
+                  <th scope="row">方程式の形</th>
+                  <td>2階の微分方程式が1本</td>
+                  <td>1階の微分方程式が、対称な2本</td>
+                </tr>
+                <tr>
+                  <th scope="row">見ているもの</th>
+                  <td>時間に沿った1本の経路</td>
+                  <td>相空間という地図の上の流れ</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </figure>
+      </section>
+
+      <section class="p-section" id="least-action">
+        <h2><span class="p-secnum">2-1</span>最小作用の原理（ラグランジュ形式）</h2>
+
+        <div class="p-question">
+          <p class="p-question__title">【問い】なぜ「力」を書くと面倒になるのか</p>
+          <p>
+            振り子を考えます。おもりに働く力は重力と糸の張力。ニュートン力学で解くなら、両方を縦横に分解して連立させることになります。
+          </p>
+          <p>
+            ところが糸の張力は、運動を決める力ではありません。おもりを円周上に縛り付けるだけで、仕事もしない。<br />
+            知りたいのは振れ角の動きだけなのに、<strong>知りたくない力の計算に付き合わされます</strong>。
+          </p>
+          <p>
+            斜面を転がるボールの垂直抗力も同じです。こういう「運動を特定の軌道に縛り付けるだけの力」を<strong>拘束力</strong>と呼びます。
+          </p>
+        </div>
+
+        <h3>座標を選び直す — 一般化座標</h3>
+
+        <p>
+          解析力学の答えは、拍子抜けするほど素直です。<br />
+          <strong>拘束されているなら、拘束されたあとの座標で書けばいい。</strong>
+        </p>
+
+        <p>
+          振り子のおもりは円周上しか動けません。であれば縦横の2つを追う必要はなく、振れ角ひとつで位置が決まります。<br />
+          このように、系の自由度そのものを表す変数を<strong>一般化座標</strong> <math><mrow><mi>q</mi></mrow></math> と呼びます。
+        </p>
+
+        <p>
+          振れ角で書いてしまえば、糸の張力は式に現れません。張力は振れ角を変える向きには一切働かないからです。<br />
+          （拘束が滑らかで、拘束力が仕事をしない場合に限ります）
+        </p>
+
+        <h3>コストの計算用紙 — ラグランジアン</h3>
+
+        <p>
+          力を捨てたあと、何を書くのか。エネルギーの<strong>引き算</strong>です。
+        </p>
+
+        <div class="p-math">
+          <math display="block"><mrow><mi>L</mi><mo>=</mo><mi>K</mi><mo>−</mo><mi>U</mi></mrow></math>
+          <p class="p-math__note">ラグランジアン。運動エネルギーからポテンシャルを引く。</p>
+        </div>
+
+        <ul>
+          <li>運動エネルギー <math><mrow><mi>K</mi></mrow></math> — 速く動くほど大きい</li>
+          <li>ポテンシャル <math><mrow><mi>U</mi></mrow></math> — 高いところにいるほど大きい</li>
+        </ul>
+
+        <p>
+          この <math><mrow><mi>L</mi></mrow></math> を、始点から終点までの全時間にわたって足し合わせます。これを<strong>作用</strong> <math><mrow><mi>S</mi></mrow></math> と呼びます。
+        </p>
+
+        <div class="p-math">
+          <math display="block"><mrow><mi>S</mi><mo>=</mo><msubsup><mo>∫</mo><msub><mi>t</mi><mn>1</mn></msub><msub><mi>t</mi><mn>2</mn></msub></msubsup><mi>L</mi><mspace width="0.2em" /><mi>d</mi><mi>t</mi></mrow></math>
+          <p class="p-math__note">経路を1本決めれば、作用の値が1つ決まる。</p>
+        </div>
+
+        <p>
+          <strong>作用は、経路に値段をつける関数</strong>だと思ってください。<br />
+          速度を出しすぎても、高いところに長居しても、値段が変わります。
+        </p>
+
+        <h3>最小作用の原理</h3>
+
+        <p>
+          始点と終点を固定したうえで、その間を結ぶあらゆる経路を考えます。そして——
+        </p>
+
+        <p>
+          <strong>実際に起こる運動は、作用が停留値をとる経路である。</strong>
+        </p>
+
+        <div class="p-math">
+          <math display="block"><mrow><mi mathvariant="normal">δ</mi><mi>S</mi><mo>=</mo><mn>0</mn></mrow></math>
+          <p class="p-math__note">まわりの経路とくらべて、作用が変化しない。</p>
+        </div>
+
+        <p>
+          「最小作用の原理」という名前が付いていますが、<strong>正確には最小とは限りません</strong>。極大や鞍点になる場合もあります。<br />
+          効いているのは「最小であること」ではなく、「まわりの経路とくらべて変化しないこと」のほうです。
+        </p>
+
+        <p>
+          この条件を計算できる形に直したのが、<strong>オイラー＝ラグランジュ方程式</strong>です。
+        </p>
+
+        <div class="p-math">
+          <math display="block"><mrow><mfrac><mrow><mi>d</mi></mrow><mrow><mi>d</mi><mi>t</mi></mrow></mfrac><mrow><mo>(</mo><mfrac><mrow><mo>∂</mo><mi>L</mi></mrow><mrow><mo>∂</mo><mover accent="true"><mi>q</mi><mo>˙</mo></mover></mrow></mfrac><mo>)</mo></mrow><mo>−</mo><mfrac><mrow><mo>∂</mo><mi>L</mi></mrow><mrow><mo>∂</mo><mi>q</mi></mrow></mfrac><mo>=</mo><mn>0</mn></mrow></math>
+          <p class="p-math__note">ラグランジアンを放り込めば、運動方程式が出てくる。</p>
+        </div>
+
+        <h3>やってみる — 投げ上げ運動</h3>
+
+        <p>
+          本当にエネルギーの引き算だけで <math><mrow><mi>m</mi><mi>a</mi></mrow></math> と同じ結果になるのか、鉛直投げ上げで確かめます。
+        </p>
+
+        <p>
+          <strong>ステップ1 — ラグランジアンを作る</strong><br />
+          高さ <math><mrow><mi>y</mi></mrow></math>、速度 <math><mrow><mover accent="true"><mi>y</mi><mo>˙</mo></mover></mrow></math> のボール。運動エネルギーは <math><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mi>m</mi><msup><mrow><mover accent="true"><mi>y</mi><mo>˙</mo></mover></mrow><mn>2</mn></msup></mrow></math>、ポテンシャルは <math><mrow><mi>m</mi><mi>g</mi><mi>y</mi></mrow></math> です。
+        </p>
+
+        <div class="p-math">
+          <math display="block"><mrow><mi>L</mi><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mi>m</mi><msup><mrow><mover accent="true"><mi>y</mi><mo>˙</mo></mover></mrow><mn>2</mn></msup><mo>−</mo><mi>m</mi><mi>g</mi><mi>y</mi></mrow></math>
+          <p class="p-math__note">投げ上げのラグランジアン。力は一度も書いていない。</p>
+        </div>
+
+        <p>
+          <strong>ステップ2 — 方程式に放り込む</strong><br />
+          あとは機械的に微分するだけです。
+        </p>
+
+        <ul>
+          <li><math><mrow><mi>L</mi></mrow></math> を速度 <math><mrow><mover accent="true"><mi>y</mi><mo>˙</mo></mover></mrow></math> で微分する ⟶ <math><mrow><mi>m</mi><mover accent="true"><mi>y</mi><mo>˙</mo></mover></mrow></math>（<strong>運動量</strong>が出てきました）</li>
+          <li>それをさらに時間で微分する ⟶ <math><mrow><mi>m</mi><mover accent="true"><mi>y</mi><mo>¨</mo></mover></mrow></math>（質量×加速度、つまり <math><mrow><mi>m</mi><mi>a</mi></mrow></math> です）</li>
+          <li><math><mrow><mi>L</mi></mrow></math> を高さ <math><mrow><mi>y</mi></mrow></math> で微分する ⟶ <math><mrow><mo>−</mo><mi>m</mi><mi>g</mi></mrow></math>（<strong>重力</strong>です）</li>
+        </ul>
+
+        <p>
+          オイラー＝ラグランジュ方程式に代入すると——
+        </p>
+
+        <div class="p-math">
+          <math display="block"><mrow><mi>m</mi><mover accent="true"><mi>y</mi><mo>¨</mo></mover><mo>−</mo><mrow><mo>(</mo><mo>−</mo><mi>m</mi><mi>g</mi><mo>)</mo></mrow><mo>=</mo><mn>0</mn></mrow></math>
+          <math display="block"><mrow><mi>m</mi><mover accent="true"><mi>y</mi><mo>¨</mo></mover><mo>=</mo><mo>−</mo><mi>m</mi><mi>g</mi></mrow></math>
+          <p class="p-math__note">ニュートンの第二法則が、そのまま姿を現す。</p>
+        </div>
+
+        <p>
+          力を矢印で描いて軸ごとに分解する作業を、一切していません。<strong>エネルギーを書いて、機械的に微分しただけ</strong>です。
+        </p>
+
+        <p>
+          ついでに注目してほしいのは、途中に出てきた2つの量です。<br />
+          ラグランジアンを速度で微分したら運動量が、位置で微分したら力が出てきました。第1章の最後で見た「裏表の関係」が、そのままこの機械の部品になっています。
+        </p>
+
+        <div class="p-column">
+          <p class="p-column__title">【コラム】ネーターの定理 — 保存則はどこから来るのか</p>
+          <p>
+            第1章では、運動量保存則を第三法則から、力学的エネルギー保存則を保存力の性質から導きました。どちらも「そういうものだから」という導き方です。
+          </p>
+          <p>
+            解析力学は、もっと深いところに答えを見つけました。<strong>保存則は、対称性から生まれる。</strong>1918年、エミー・ネーターの定理です。
+          </p>
+          <p>
+            明日実験しても今日と同じ結果になる（時間をずらしても法則が変わらない）⟶ <strong>エネルギーが保存する</strong><br />
+            東京でも大阪でも同じ結果になる（場所をずらしても変わらない）⟶ <strong>運動量が保存する</strong><br />
+            装置ごと向きを変えても同じ結果になる（回しても変わらない）⟶ <strong>角運動量が保存する</strong>
+          </p>
+          <p>
+            変わらない量の裏には、必ず変わらない性質が隠れている。<br />
+            第1章で「保存するかどうかは、どこに線を引いたか次第」と書きました。ネーターの定理は、その一段上から「そもそもなぜ保存するのか」に答えています。
+          </p>
+        </div>
+      </section>
+
+      <section class="p-section" id="phase-space">
+        <h2><span class="p-secnum">2-2</span>相空間とハミルトニアン（ハミルトン形式）</h2>
+
+        <h3>全エネルギーを中心に据える</h3>
+
+        <p>
+          ラグランジュ形式は引き算 <math><mrow><mi>L</mi><mo>=</mo><mi>K</mi><mo>−</mo><mi>U</mi></mrow></math> でした。ハミルトン形式は<strong>足し算</strong>を使います。
+        </p>
+
+        <div class="p-math">
+          <math display="block"><mrow><mi>H</mi><mo>=</mo><mi>K</mi><mo>+</mo><mi>U</mi></mrow></math>
+          <p class="p-math__note">ハミルトニアン。多くの場合、全エネルギーに一致する。</p>
+        </div>
+
+        <p>
+          そして状態を表す変数から<strong>速度を追い出し</strong>、代わりに<strong>運動量</strong>を入れます。位置 <math><mrow><mi>q</mi></mrow></math> と運動量 <math><mrow><mi>p</mi></mrow></math> 、この2つを対等なペアとして扱う。ここがハミルトン形式の要です。
+        </p>
+
+        <p>
+          （<math><mrow><mi>H</mi></mrow></math> が全エネルギーにぴたりと一致するのは、座標や拘束が時間に陽に依存せず、運動エネルギーが速度の2次形式になっている場合です。ふつうの力学ではこの条件が満たされます。）
+        </p>
+
+        <h3>相空間 — 状態の地図</h3>
+
+        <p>
+          横軸に位置 <math><mrow><mi>q</mi></mrow></math>、縦軸に運動量 <math><mrow><mi>p</mi></mrow></math> を取った平面を<strong>相空間</strong>と呼びます。
+        </p>
+
+        <p>
+          第1章の最後で「位置と運動量が分かれば未来も過去も決まる」と書きました。<br />
+          相空間は、その主張をそのまま絵にした場所です。いまの状態は相空間の1点であり、時間が経つとその点が動いていく。<strong>運動は、地図の上に描かれる1本の線になります。</strong>
+        </p>
+
+        <p>
+          決定論は、この地図の上では<strong>線が絶対に交差しない</strong>という性質として現れます。<br />
+          もし2本の線が交わったら、同じ1点から2つの未来が出ていくことになり、未来が一意に決まらなくなってしまうからです。（ハミルトニアンが時間に陽に依存しない場合の話です。）
+        </p>
+
+        <p>
+          単振動なら、相空間の軌道は閉じた楕円になります。エネルギーが大きいほど大きな楕円。<br />
+          時間を追って位置のグラフを描く代わりに、<strong>運動の全体像が1枚の絵として見えてしまう</strong>。これがハミルトン形式の眺めです。
+        </p>
+
+        <h3>正準方程式</h3>
+
+        <p>
+          ハミルトン形式の運動方程式は、驚くほど対称な形をしています。
+        </p>
+
+        <div class="p-math">
+          <math display="block"><mrow><mover accent="true"><mi>q</mi><mo>˙</mo></mover><mo>=</mo><mfrac><mrow><mo>∂</mo><mi>H</mi></mrow><mrow><mo>∂</mo><mi>p</mi></mrow></mfrac><mo>,</mo><mspace width="1.6em" /><mover accent="true"><mi>p</mi><mo>˙</mo></mover><mo>=</mo><mo>−</mo><mfrac><mrow><mo>∂</mo><mi>H</mi></mrow><mrow><mo>∂</mo><mi>q</mi></mrow></mfrac></mrow></math>
+          <p class="p-math__note">ハミルトンの正準方程式。</p>
+        </div>
+
+        <ul>
+          <li>位置の時間変化は、全エネルギーを<strong>運動量</strong>で微分したもの</li>
+          <li>運動量の時間変化は、全エネルギーを<strong>位置</strong>で微分して、マイナスを付けたもの</li>
+        </ul>
+
+        <p>
+          ラグランジュ形式では2階の微分方程式が1本でした。ここでは1階の方程式が2本。しかも位置と運動量を入れ替えると、符号だけが変わる。<br />
+          <strong>この対等なペアこそが、第3章で演算子に姿を変える直前の形です。</strong>
+        </p>
+
+        <details class="p-disclosure">
+          <summary>正準方程式はどうやって導かれるのか</summary>
+          <div class="p-disclosure__body">
+            <p>
+              「変数を速度から運動量へ乗り換える」という操作（ルジャンドル変換）から出てきます。
+            </p>
+            <p>
+              まずハミルトニアンを、ラグランジアンを使って定義します。
+            </p>
+            <div class="p-math">
+              <math display="block"><mrow><mi>H</mi><mrow><mo>(</mo><mi>q</mi><mo>,</mo><mi>p</mi><mo>)</mo></mrow><mo>=</mo><mi>p</mi><mover accent="true"><mi>q</mi><mo>˙</mo></mover><mo>−</mo><mi>L</mi><mrow><mo>(</mo><mi>q</mi><mo>,</mo><mover accent="true"><mi>q</mi><mo>˙</mo></mover><mo>)</mo></mrow></mrow></math>
+            </div>
+            <p>
+              ほんの少しの変化を見ます。
+            </p>
+            <div class="p-math">
+              <math display="block"><mrow><mi>d</mi><mi>H</mi><mo>=</mo><mi>p</mi><mi>d</mi><mover accent="true"><mi>q</mi><mo>˙</mo></mover><mo>+</mo><mover accent="true"><mi>q</mi><mo>˙</mo></mover><mi>d</mi><mi>p</mi><mo>−</mo><mi>d</mi><mi>L</mi></mrow></math>
+            </div>
+            <p>
+              ここで <math><mrow><mi>d</mi><mi>L</mi></mrow></math> を展開します。運動量の定義 <math><mrow><mi>p</mi><mo>=</mo><mfrac><mrow><mo>∂</mo><mi>L</mi></mrow><mrow><mo>∂</mo><mover accent="true"><mi>q</mi><mo>˙</mo></mover></mrow></mfrac></mrow></math> と、オイラー＝ラグランジュ方程式から出る <math><mrow><mover accent="true"><mi>p</mi><mo>˙</mo></mover><mo>=</mo><mfrac><mrow><mo>∂</mo><mi>L</mi></mrow><mrow><mo>∂</mo><mi>q</mi></mrow></mfrac></mrow></math> を当てはめると、こうなります。
+            </p>
+            <div class="p-math">
+              <math display="block"><mrow><mi>d</mi><mi>L</mi><mo>=</mo><mfrac><mrow><mo>∂</mo><mi>L</mi></mrow><mrow><mo>∂</mo><mi>q</mi></mrow></mfrac><mi>d</mi><mi>q</mi><mo>+</mo><mfrac><mrow><mo>∂</mo><mi>L</mi></mrow><mrow><mo>∂</mo><mover accent="true"><mi>q</mi><mo>˙</mo></mover></mrow></mfrac><mi>d</mi><mover accent="true"><mi>q</mi><mo>˙</mo></mover><mo>=</mo><mover accent="true"><mi>p</mi><mo>˙</mo></mover><mi>d</mi><mi>q</mi><mo>+</mo><mi>p</mi><mi>d</mi><mover accent="true"><mi>q</mi><mo>˙</mo></mover></mrow></math>
+            </div>
+            <p>
+              これを上の式に入れると、<math><mrow><mi>d</mi><mover accent="true"><mi>q</mi><mo>˙</mo></mover></mrow></math> の項がきれいに消えます。
+            </p>
+            <div class="p-math">
+              <math display="block">
+                <mtable columnalign="right center left">
+                  <mtr>
+                    <mtd><mrow><mi>d</mi><mi>H</mi></mrow></mtd>
+                    <mtd><mo>=</mo></mtd>
+                    <mtd><mrow><mi>p</mi><mi>d</mi><mover accent="true"><mi>q</mi><mo>˙</mo></mover><mo>+</mo><mover accent="true"><mi>q</mi><mo>˙</mo></mover><mi>d</mi><mi>p</mi><mo>−</mo><mo>(</mo><mover accent="true"><mi>p</mi><mo>˙</mo></mover><mi>d</mi><mi>q</mi><mo>+</mo><mi>p</mi><mi>d</mi><mover accent="true"><mi>q</mi><mo>˙</mo></mover><mo>)</mo></mrow></mtd>
+                  </mtr>
+                  <mtr>
+                    <mtd></mtd>
+                    <mtd><mo>=</mo></mtd>
+                    <mtd><mrow><mover accent="true"><mi>q</mi><mo>˙</mo></mover><mi>d</mi><mi>p</mi><mo>−</mo><mover accent="true"><mi>p</mi><mo>˙</mo></mover><mi>d</mi><mi>q</mi></mrow></mtd>
+                  </mtr>
+                </mtable>
+              </math>
+              <p class="p-math__note">1項目と最後の項が打ち消し合う。</p>
+            </div>
+            <p>
+              一方、<math><mrow><mi>H</mi></mrow></math> は位置と運動量の関数なので、全微分は本来こう書けるはずです。
+            </p>
+            <div class="p-math">
+              <math display="block"><mrow><mi>d</mi><mi>H</mi><mo>=</mo><mfrac><mrow><mo>∂</mo><mi>H</mi></mrow><mrow><mo>∂</mo><mi>q</mi></mrow></mfrac><mi>d</mi><mi>q</mi><mo>+</mo><mfrac><mrow><mo>∂</mo><mi>H</mi></mrow><mrow><mo>∂</mo><mi>p</mi></mrow></mfrac><mi>d</mi><mi>p</mi></mrow></math>
+            </div>
+            <p>
+              2つの式の係数を見比べれば、正準方程式が出てきます。<br />
+              <strong>変数を乗り換えたら、対称性が勝手に浮かび上がってきた</strong>——というのが、からくりの全部です。
+            </p>
+          </div>
+        </details>
+
+        <h3>第2章のまとめ</h3>
+
+        <figure class="p-figure is-wide">
+          <figcaption class="p-table__caption" id="cap-summary2">同じ運動を、3通りに書く。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-table-wrap" tabindex="0" role="region" aria-labelledby="cap-summary2">
+            <table class="p-table" aria-labelledby="cap-summary2">
+              <thead>
+                <tr>
+                  <th scope="col">　</th>
+                  <th scope="col">ニュートン力学</th>
+                  <th scope="col">ラグランジュ形式</th>
+                  <th scope="col">ハミルトン形式</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">状態の記述</th>
+                  <td>位置と速度</td>
+                  <td>一般化座標 <math><mrow><mi>q</mi></mrow></math> と速度 <math><mrow><mover accent="true"><mi>q</mi><mo>˙</mo></mover></mrow></math></td>
+                  <td>位置 <math><mrow><mi>q</mi></mrow></math> と運動量 <math><mrow><mi>p</mi></mrow></math></td>
+                </tr>
+                <tr>
+                  <th scope="row">中心となる量</th>
+                  <td>個別の力</td>
+                  <td><math><mrow><mi>L</mi><mo>=</mo><mi>K</mi><mo>−</mo><mi>U</mi></mrow></math></td>
+                  <td><math><mrow><mi>H</mi><mo>=</mo><mi>K</mi><mo>+</mo><mi>U</mi></mrow></math></td>
+                </tr>
+                <tr>
+                  <th scope="row">法則の見え方</th>
+                  <td>力が加速度を生む（因果）</td>
+                  <td>作用が停留になる経路を選ぶ（大域）</td>
+                  <td>相空間を状態が流れる（幾何）</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </figure>
+
+        <h3>第3章への伏線</h3>
+
+        <p>
+          解析力学によって、物理学は「作用が停留になる経路」「相空間を流れる状態」という、極限まで美しい数学に到達しました。
+        </p>
+
+        <p>
+          けれど、ここで1つ巨大な謎が残ります。
+        </p>
+
+        <p>
+          <strong>なぜボールは、飛び立つ前から着地までのコストを計算して、停留値の経路を選べるのか。</strong>
+        </p>
+
+        <p>
+          始点と終点を先に決めて、その間の経路を比べる。この手続きは、未来を先に知っていないと実行できないように見えます。<br />
+          ニュートン力学の「いま働いている力で次が決まる」という素直な因果とは、明らかに様子が違う。序章で「居心地の悪い問い」と呼んだのは、これのことです。
+        </p>
+
+        <p>
+          第3章では、この謎が解けます。<br />
+          粒子は経路を選んでいたのではありませんでした。<strong>すべての経路を、同時に通っていた。</strong>
+        </p>
+      </section>
+
+      <p>
+        量子力学に初めて触れる人は、第3章の前に<a href="/physics/quantum-intro/">入門編「量子力学の誕生」</a>を読むのがおすすめです。黒体放射や光電効果など、量子力学が生まれるきっかけになった実験を順にたどります。
+      </p>
+
+      <a class="p-next" href="/physics/quantum/" aria-labelledby="next-quantum">
+        <p class="p-next__label">次の章</p>
+        <p class="p-next__title" id="next-quantum">第3章　量子力学 — 波の重ね合わせから運動を求める</p>
+        <p class="p-next__desc">
+          なぜ粒子は、作用が停留になる経路をあらかじめ知っているのか。<br />
+          経路積分がこの問いに答え、ニュートン力学が「波の干渉が残した影」だったことが分かります。
+        </p>
+      </a>
+
+    </div>
+  </div>
+</main>
+
+<footer class="l-footer">
+  <div class="l-container">
+    <p>mutexn</p>
+  </div>
+</footer>
+
+</body>
+</html>

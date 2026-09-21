@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>第3章 量子力学 — 波の重ね合わせから運動を求める</title>
+<meta name="description" content="粒子は1本の道ではなく、すべての道を同時に通る波だった。作用は波の位相であり、干渉を生き残った経路がニュートン力学の放物線になる。経路積分、演算子、シュレディンガー方程式、不確定性原理まで。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  /* =======================================================================
+     デジタル庁デザインシステム（DADS）準拠
+     カラー値の出典: @digital-go-jp/design-tokens v2.0.1
+     トークンと l- / p- の命名は app/index.html に揃える
+     ======================================================================= */
+  :root {
+    --white: #ffffff;
+    --gray-50: #f2f2f2;
+    --gray-420: #949494;   /* 対白 3.03:1  非テキスト下限 */
+    --gray-536: #767676;   /* 対白 4.54:1  テキスト下限 */
+    --gray-800: #333333;   /* 対白 12.63:1 */
+    --gray-900: #1a1a1a;   /* 対白 17.40:1 */
+    --black: #000000;
+    --link: #0017c1;           /* blue-900     対白 11.10:1 */
+    --link-visited: #8b008b;   /* magenta-900  対白  8.50:1 */
+    --link-active: #ac3e00;    /* orange-900   対白  6.10:1 */
+    --focus-yellow: #ffd43d;   /* yellow-300   フォーカス（変更禁止） */
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--white);
+    color: var(--gray-900);
+    /* Std-17N-170 */
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 17px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+  }
+
+  /* ----- フォーカスインジケーター: Yellow-300 と Black の2重構造 ----- */
+  a:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 2px;
+    background-color: var(--focus-yellow);
+    color: var(--gray-900);
+    box-shadow: 0 0 0 2px var(--focus-yellow);
+    text-decoration-color: var(--gray-900);
+  }
+
+  /* ----- レイアウト ----- */
+  .l-container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .l-main { padding: 24px 0 80px; }
+
+  /* ----- パンくず -----
+     DADS components/breadcrumb: ヘッダーとページ見出しの間に置き、
+     コンテンツ幅を超える場合は改行する */
+  .l-breadcrumb {
+    padding: 24px 0 0;
+    /* Std-16N-170 */
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-breadcrumb ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 8px;
+  }
+  .l-breadcrumb li { display: flex; align-items: center; gap: 8px; }
+  .l-breadcrumb li + li::before { content: '\203A'; color: var(--gray-536); }
+
+  /* ----- 本文カラム -----
+     DADS foundations/layout のカラムオフセットに倣い、読み物は幅を絞る */
+  .p-prose { max-width: 720px; }
+
+  /* Std-45B-140 */
+  h1 {
+    font-size: 45px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0;
+    margin: 0 0 8px;
+  }
+  /* Std-24N-150 */
+  .p-subtitle {
+    margin: 0 0 24px;
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+
+  .p-prose p { margin: 0 0 20px; }
+  .p-prose ul { margin: 0 0 20px; padding-left: 1.6em; }
+  .p-prose li { margin-bottom: 8px; }
+
+  /* Std-32B-150 */
+  .p-prose h2 {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    margin: 0 0 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gray-420);
+  }
+  /* 節番号。見出しの上に小さく置く: Std-16N-170 */
+  .p-prose h2 .p-secnum {
+    display: block;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-536);
+  }
+  /* Std-24B-150 */
+  .p-prose h3 {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    margin: 40px 0 12px;
+  }
+
+  /* 節。次の節との間をしっかり空ける */
+  .p-section { margin-top: 64px; }
+
+  /* キャッチコピー: Std-20N-150 */
+  .p-catch {
+    margin: 0 0 24px;
+    font-size: 20px;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+
+  /* ----- 本文中のリンク: 色以外にも下線で示す ----- */
+  .p-prose a, .l-breadcrumb a {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  .p-prose a:visited, .l-breadcrumb a:visited { color: var(--link-visited); }
+  .p-prose a:hover, .l-breadcrumb a:hover { text-decoration-thickness: 3px; }
+  .p-prose a:active, .l-breadcrumb a:active { color: var(--link-active); }
+
+  /* ----- ページ内目次 ----- */
+  .p-toc {
+    margin: 0 0 8px;
+    padding: 20px 24px;
+    background: var(--white);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+  }
+  .p-toc__title {
+    margin: 0 0 8px;
+    /* Std-16B-170 */
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+  .p-toc ol {
+    margin: 0;
+    padding-left: 1.4em;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .p-toc li { margin-bottom: 4px; }
+  .p-toc li:last-child { margin-bottom: 0; }
+
+  /* ----- 問い・コラム・一歩先の視点 -----
+     DADS の注釈ブロックは「補足情報」のためのコンポーネントで、
+     コラムのように文脈を切り替える目的には使ってはいけないと規定されている。
+     よって注釈ブロックを流用せず、独自のブロックとして組む。
+     境界は影ではなく罫線で示す（--gray-420 / --link はいずれも対白 3:1 以上） */
+  .p-question, .p-column, .p-aside {
+    margin: 32px 0;
+    padding: 20px 24px;
+    background: var(--gray-50);
+    border-left: 4px solid var(--gray-420);
+  }
+  .p-question { border-left-color: var(--link); }
+  /* Std-18B-160 */
+  .p-question__title, .p-column__title, .p-aside__title {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+  }
+  .p-question p, .p-column p, .p-aside p { margin: 0 0 16px; }
+  .p-question p:last-child, .p-column p:last-child, .p-aside p:last-child { margin-bottom: 0; }
+
+  /* ----- 数式（MathML）-----
+     ライブラリを使わずブラウザ内蔵の描画に任せる。
+     数式フォントはいずれもローカル。外部リソースを増やさない */
+  math {
+    font-family: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', 'Noto Sans Math', serif;
+  }
+  /* 独立した式。狭い画面で溢れたら横スクロールで救う */
+  .p-math {
+    margin: 24px 0;
+    padding: 16px 20px;
+    overflow-x: auto;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-420);
+    border-radius: 4px;
+  }
+  .p-math math { font-size: 20px; }
+  /* 指数に主役が乗っている式（e の肩）は、肩の文字が小さくなるので一段大きく組む */
+  .p-math.is-large math { font-size: 28px; }
+  /* 式変形を縦に並べるとき、等号の位置を揃える。
+     MathML Core は mtable の columnalign を解釈しないので CSS で指定する
+     （左辺は右寄せ、等号は中央、右辺は左寄せ） */
+  .p-math mtd { text-align: center; }
+  /* mtable のセルは既定で行内サイズ（分数や積分記号が縮む）になるので、
+     独立した式と同じ大きさで組む */
+  .p-math mtd { math-style: normal; }
+  .p-math mtd:nth-child(1) { text-align: right; }
+  .p-math mtd:nth-child(3) { text-align: left; }
+  /* 式に添える注記: Std-16N-170。gray-50 の上なので gray-800（11.29:1） */
+  .p-math__note {
+    margin: 8px 0 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+    text-align: center;
+  }
+
+  /* ----- 対比表 -----
+     DADS: 高密度用途の行高は 130%（Dns-16N-130） */
+  /* 横スクロールする領域はキーボードでも操作できる必要があるため、
+     マークアップ側で tabindex="0" と role="region" を付けている */
+  .p-table-wrap { margin: 0; overflow-x: auto; }
+  .p-table-wrap:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    box-shadow: 0 0 0 4px var(--focus-yellow);
+  }
+  .p-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+    line-height: 1.3;
+    letter-spacing: 0;
+  }
+  /* 見出しセルの背景が gray-50 のため、罫線は gray-420（対 gray-50 2.71:1）では
+     非テキスト下限 3:1 に届かない。gray-536（同 4.06:1）を使う */
+  .p-table th, .p-table td {
+    padding: 12px;
+    border: 1px solid var(--gray-536);
+    text-align: left;
+    vertical-align: top;
+  }
+  /* 表とその説明。説明は横スクロール領域の外に置く（中に入れると一緒に流れて切れる） */
+  .p-figure { margin: 24px 0; }
+  /* Std-16N-170 */
+  .p-table__caption {
+    margin: 0 0 8px;
+    font-size: 16px;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-536);
+    text-align: left;
+  }
+  /* 横スクロールの手がかり。スクロールが起きる幅でだけ出す */
+  .p-table__hint { display: none; }
+  .p-table thead th {
+    background: var(--gray-50);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .p-table tbody th {
+    background: var(--gray-50);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* .p-prose a の下線・色は本文中のテキストリンク用。
+     ブロック全体を包むリンクには効かせない（下線はタイトルだけに付ける） */
+  .p-prose a.p-next {
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+
+  /* ----- 次章への導線 -----
+     DADS: コンテナ自体をクリッカブルエリア（フォーカス可能エリア）にできる。
+     その場合、コンテナ内に別のリンクを置いてはいけない */
+  .p-next {
+    display: block;
+    margin-top: 64px;
+    padding: 20px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+  a.p-next:hover { border-color: var(--gray-900); }
+  /* 大きな領域がフォーカス可能なので、全面を黄色で塗らずリング状の2重構造にする */
+  a.p-next:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    background-color: var(--gray-50);
+    box-shadow: 0 0 0 4px var(--focus-yellow);
+  }
+  /* gray-50 の上に載るので gray-800（11.29:1） */
+  .p-next__label {
+    margin: 0 0 4px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+    font-feature-settings: 'palt';
+  }
+  /* Std-20B-150。
+     DADS: コンテナ自体がリンクの場合もタイトルにアンダーラインを付与する */
+  .p-next__title {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+  a.p-next .p-next__title {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  a.p-next:visited .p-next__title { color: var(--link-visited); }
+  a.p-next:hover .p-next__title { text-decoration-thickness: 3px; }
+  a.p-next:active .p-next__title { color: var(--link-active); }
+  .p-next__desc {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+  }
+  .p-status {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 0 8px;
+    border: 1px solid var(--gray-536);
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+    vertical-align: middle;
+  }
+
+  /* ----- 2つの形式（ラグランジュ / ハミルトン）-----
+     囲みではなく罫線で区切る。序章の「3つの視点」と同じ流儀 */
+  .p-forms {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+    border-top: 1px solid var(--gray-420);
+  }
+  /* .p-prose ul の字下げと li の余白は本文の箇条書き用なので打ち消す */
+  .p-prose .p-forms { padding-left: 0; }
+  .p-prose .p-forms > li { margin-bottom: 0; }
+  .p-form {
+    padding: 20px 0;
+    border-bottom: 1px solid var(--gray-420);
+  }
+  /* Std-16N-170 */
+  .p-form__num {
+    margin: 0 0 4px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+    font-feature-settings: 'palt';
+  }
+  /* Std-20B-150 */
+  .p-form__title {
+    margin: 0 0 8px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+  /* Std-16N-170 */
+  .p-form__lead {
+    margin: 0 0 12px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+  }
+  .p-form dl {
+    display: grid;
+    grid-template-columns: 7em 1fr;
+    gap: 4px 16px;
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+  }
+  .p-form dt { font-weight: 700; }
+  .p-form dd { margin: 0; }
+
+  /* ----- ディスクロージャー -----
+     DADS: 展開しなくても地の文だけで必要最低限の情報が伝わる場合にのみ使える。
+     ここは正準方程式の導出（補足）なので条件を満たす。
+     <details> なので JS は不要 */
+  .p-disclosure {
+    margin: 32px 0;
+    background: var(--white);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+  }
+  /* Std-18B-160 */
+  .p-disclosure > summary {
+    padding: 16px 20px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  .p-disclosure > summary:hover { text-decoration-thickness: 3px; }
+  .p-disclosure[open] > summary { border-bottom: 1px solid var(--gray-420); }
+  .p-disclosure > summary:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: -4px;
+    background-color: var(--focus-yellow);
+    color: var(--gray-900);
+    text-decoration-color: var(--gray-900);
+  }
+  .p-disclosure__body { padding: 16px 20px; }
+  .p-disclosure__body > *:first-child { margin-top: 0; }
+  .p-disclosure__body > *:last-child { margin-bottom: 0; }
+
+  /* ----- 読む順番の案内 -----
+     本文の主張ではなく、読者への道案内。ページ内目次と同じ囲みの形にそろえる */
+  .p-guide {
+    margin: 0 0 24px;
+    padding: 20px 24px;
+    background: var(--white);
+    border: 1px solid var(--gray-420);
+    border-left: 4px solid var(--link);
+    border-radius: 4px;
+  }
+  /* Std-16B-170 */
+  .p-guide__title {
+    margin: 0 0 8px;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+  /* Std-16N-170 */
+  .p-guide p:last-child {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  /* ----- 結び -----
+     シリーズ全体の締めくくり。原典の引用ではないので blockquote は使わない。
+     境界は影ではなく罫線（gray-900 は対白 17.40:1） */
+  .p-ending {
+    margin: 32px 0 0;
+    padding: 24px;
+    background: var(--gray-50);
+    border-left: 4px solid var(--gray-900);
+  }
+  /* Std-18N-160 */
+  .p-ending p {
+    margin: 0 0 16px;
+    font-size: 18px;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+  }
+  .p-ending p:last-child { margin-bottom: 0; }
+
+  /* ----- フッター ----- */
+  .l-footer {
+    border-top: 1px solid var(--gray-420);
+    padding: 24px 0 40px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-footer p { margin: 0; }
+
+  /* ----- モバイル・タブレット: 768px 未満 ----- */
+  @media (max-width: 767px) {
+    body {
+      /* Std-16N-175 */
+      font-size: 16px;
+      line-height: 1.75;
+    }
+    .l-container { padding: 0 16px; }
+    .l-main { padding: 16px 0 56px; }
+    .l-breadcrumb { padding-top: 16px; }
+    /* Std-32B-150 */
+    h1 {
+      font-size: 32px;
+      line-height: 1.5;
+      letter-spacing: 0.01em;
+    }
+    /* Std-20N-150 */
+    .p-subtitle {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+    /* Std-28B-150 */
+    .p-prose h2 { font-size: 28px; }
+    /* Std-22B-150 */
+    .p-prose h3 { font-size: 22px; }
+    .p-section { margin-top: 48px; }
+    /* Std-18N-160 */
+    .p-catch { font-size: 18px; line-height: 1.6; }
+    .p-toc { padding: 16px; }
+    .p-question, .p-column, .p-aside { padding: 16px; }
+    .p-math { padding: 12px; }
+    .p-math math { font-size: 18px; }
+    /* 3列を 375px に詰め込むと1行あたり数文字になって読めない。
+       列の多い表だけ、列幅を確保して横スクロールに切り替える */
+    .p-figure.is-wide .p-table { min-width: 520px; }
+    .p-figure.is-wide .p-table__hint { display: inline; }
+    .p-form { padding: 16px 0; }
+    .p-form dl { grid-template-columns: 1fr; gap: 0; }
+    .p-form dt { margin-top: 8px; }
+    .p-form dt:first-child { margin-top: 0; }
+    .p-disclosure > summary { padding: 12px 16px; }
+    .p-disclosure__body { padding: 12px 16px; }
+    .p-guide { padding: 16px; }
+    .p-ending { padding: 16px; }
+    /* Std-17N-170 */
+    .p-ending p { font-size: 17px; line-height: 1.7; }
+    .p-next { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="l-breadcrumb" aria-label="パンくず">
+  <div class="l-container">
+    <ol>
+      <li><a href="/">目次</a></li>
+      <li><a href="/physics/">物理学のストーリー</a></li>
+      <li aria-current="page">第3章 量子力学</li>
+    </ol>
+  </div>
+</nav>
+
+<main class="l-main">
+  <div class="l-container">
+    <div class="p-prose">
+
+      <h1>第3章　量子力学</h1>
+      <p class="p-subtitle">波の重ね合わせから運動を求める</p>
+
+      <p class="p-catch">「1本の確かな線」から、「無数の波の重なり」が織りなす現実へ。</p>
+
+      <p>
+        ニュートン力学と解析力学が積み上げてきた古典物理学は、「物体の軌道は1本に決まる」という前提に立っていました。<br />
+        ミクロの世界に潜ると、この前提が崩れます。粒子は1本の道を進むのではなく、<strong>すべての道を同時に通る波</strong>でした。解析力学が用意した舞台の上で、その姿を見ていきます。
+      </p>
+
+      <div class="p-guide">
+        <p class="p-guide__title">量子力学が初めての人へ</p>
+        <p>
+          この章は、量子力学を第2章の解析力学の言葉で見直す章です。<br />
+          量子力学に初めて触れる場合は、実験の順に追いかける<a href="/physics/quantum-intro/">入門編「量子力学の誕生」</a>を先に読むと、ぐっと読みやすくなります。
+        </p>
+      </div>
+
+      <nav class="p-toc" aria-label="このページの目次">
+        <p class="p-toc__title">このページの内容</p>
+        <ol>
+          <li><a href="#overview">3-0. 量子力学とは何か（思想と本質）</a></li>
+          <li><a href="#path-integral">3-1. 経路積分（すべての経路を通る波）</a></li>
+          <li><a href="#schrodinger">3-2. シュレディンガー方程式（演算子と状態）</a></li>
+          <li><a href="#whole-story">3-3. 全体のまとめ（物理学の1本のストーリー）</a></li>
+        </ol>
+      </nav>
+
+      <section class="p-section" id="overview">
+        <h2><span class="p-secnum">3-0</span>量子力学とは何か（思想と本質）</h2>
+
+        <h3>「決まった軌道」から「波の重なり」へ</h3>
+
+        <p>
+          第1章の最後で、ラプラスの悪魔にたどり着きました。位置と運動量が分かれば、未来の軌道は1本の線として完全に決まる。<br />
+          第2章の相空間は、その線を地図の上に描いたものでした。
+        </p>
+
+        <p>
+          量子力学は、この前提を根本から覆します。
+        </p>
+
+        <ul>
+          <li><strong>古典力学</strong> — 粒子は、あらかじめ決まった1本の軌道の上を動く</li>
+          <li><strong>量子力学</strong> — 粒子に決まった軌道はない。観測されるまでは、あらゆる可能性が波として重なり合って広がっている</li>
+        </ul>
+
+        <p>
+          物理学の主役は「1本の軌道」から、可能性の重なりを表す波——<strong>波動関数</strong>へと移ります。
+        </p>
+
+        <p>
+          ただし序章でも触れたとおり、波動関数そのものは方程式に従って決定論的に時間発展します。<br />
+          確率が顔を出すのは、その波を観測して結果を読み取るときです。どの結果がどれだけの確率で出るかは、波の振幅の2乗で決まります。
+        </p>
+
+        <h3>解析力学と量子力学の1対1の対応</h3>
+
+        <p>
+          第2章で見た解析力学の2つの形式は、実はそのまま量子力学の2大アプローチにつながっています。
+        </p>
+
+        <figure class="p-figure is-wide">
+          <figcaption class="p-table__caption" id="cap-bridge">解析力学の2つの形式と、その子孫。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-table-wrap" tabindex="0" role="region" aria-labelledby="cap-bridge">
+            <table class="p-table" aria-labelledby="cap-bridge">
+              <thead>
+                <tr>
+                  <th scope="col">解析力学</th>
+                  <th scope="col">量子力学</th>
+                  <th scope="col">鍵になる量</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">ラグランジュ形式</th>
+                  <td>ファインマンの経路積分<br />作用を使って、すべての経路を足し合わせる</td>
+                  <td>作用 <math><mrow><mi>S</mi></mrow></math></td>
+                </tr>
+                <tr>
+                  <th scope="row">ハミルトン形式</th>
+                  <td>シュレディンガー方程式<br />ハミルトニアンを使って、波の時間変化を追う</td>
+                  <td>ハミルトニアン <math><mrow><mi>H</mi></mrow></math></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </figure>
+
+        <p>
+          解析力学という数学の足場があったからこそ、物理学者たちは量子力学という不可思議な世界に言葉を与えることができました。
+        </p>
+
+        <p>
+          歴史的には、シュレディンガー方程式（1926年）のほうが経路積分（1948年）よりずっと先に生まれています。<br />
+          それでもこの章で経路積分を先に扱うのは、第2章が残した謎に直接答えるのが経路積分だからです。
+        </p>
+      </section>
+
+      <section class="p-section" id="path-integral">
+        <h2><span class="p-secnum">3-1</span>経路積分（すべての経路を通る波）</h2>
+
+        <div class="p-question">
+          <p class="p-question__title">【問い】なぜ粒子は、作用が停留になる経路をあらかじめ知っているのか</p>
+          <p>
+            第2章の最後に残った謎を、もう一度確認します。
+          </p>
+          <p>
+            空中を飛ぶボールは、飛び立つ前から、始点と終点の間で作用が停留値をとる放物線を知っていて、その経路を選んでいるように見える。<br />
+            最小作用の原理は、計算結果としては完璧でした。けれど「なぜそうなるのか」には答えていませんでした。
+          </p>
+          <p>
+            この問いに答えたのが、リチャード・ファインマンの<strong>経路積分</strong>です。
+          </p>
+        </div>
+
+        <h3>作用の正体 — 矢印の回転角</h3>
+
+        <p>
+          ファインマンは、自分の考えをストップウォッチの針にたとえて説明しました。
+        </p>
+
+        <p>
+          粒子が始点から終点まで1本の経路をたどると、それに対応して1本の矢印が決まります。矢印の長さはどの経路でも同じで、違うのは<strong>向き</strong>だけ。<br />
+          その向き、つまり回転角が、経路の作用を <math><mrow><mi>ℏ</mi></mrow></math> で割った値 <math><mrow><mi>S</mi><mo>/</mo><mi>ℏ</mi></mrow></math> です。
+        </p>
+
+        <div class="p-math is-large">
+          <math display="block"><mrow><msup><mi>e</mi><mrow><mi>i</mi><mi>S</mi><mo>/</mo><mi>ℏ</mi></mrow></msup></mrow></math>
+          <p class="p-math__note">1本の経路が持つ矢印（複素数平面上の長さ1の矢印）。向きが <math><mrow><mi>S</mi><mo>/</mo><mi>ℏ</mi></mrow></math>。</p>
+        </div>
+
+        <p>
+          <math><mrow><mi>ℏ</mi></mrow></math>（エイチバー）はプランク定数を 2π で割った値で、およそ 1.05×10<sup>−34</sup> J·s。作用と同じ単位を持つ、量子力学の「目盛り」です。
+        </p>
+
+        <p>
+          解析力学で「経路の値段」として計算していた作用は、量子力学では<strong>矢印をどれだけ回すか</strong>を表す量だったのです。<br />
+          作用と波の位相を結びつける発想自体は、1933年にディラックが論文の中で示していました。ファインマンはそれを、計算できる理論にまで仕上げました。
+        </p>
+
+        <h3>すべての経路を足し合わせる</h3>
+
+        <p>
+          ファインマンの主張はこうです。<br />
+          <strong>粒子は、始点と終点を結ぶあらゆる経路を、同時に通っている。</strong>
+        </p>
+
+        <p>
+          まっすぐな道も、ぐにゃぐにゃ曲がった道も、とんでもない遠回りも。決められた時間で始点から終点へたどり着く経路なら、すべてが候補です。
+        </p>
+
+        <p>
+          そして、すべての経路の矢印を<strong>つなぎ合わせて足す</strong>。できあがった1本の矢印の長さの2乗が、粒子がその終点で見つかる確率になります。
+        </p>
+
+        <div class="p-math">
+          <math display="block"><mrow><mtext>振幅</mtext><mo>=</mo><munder><mo>∑</mo><mtext>すべての経路</mtext></munder><msup><mi>e</mi><mrow><mi>i</mi><mi>S</mi><mo>/</mo><mi>ℏ</mi></mrow></msup><mo>,</mo><mspace width="1.6em" /><mtext>確率</mtext><mo>=</mo><msup><mrow><mo>|</mo><mspace width="0.15em" /><mtext>振幅</mtext><mspace width="0.15em" /><mo>|</mo></mrow><mn>2</mn></msup></mrow></math>
+          <p class="p-math__note">経路ごとの矢印を足し、最後に長さを2乗する。</p>
+        </div>
+
+        <p>
+          経路は無数にあるので、実際には和ではなく積分になります。これが「経路積分」という名前の由来です。
+        </p>
+
+        <h3>なぜ日常の世界では放物線に見えるのか</h3>
+
+        <p>
+          すべての経路を通っているなら、なぜ投げたボールはぐにゃぐにゃ飛ばずに、きれいな放物線を描くのでしょうか。<br />
+          鍵は、矢印の<strong>打ち消し合い</strong>です。
+        </p>
+
+        <ul>
+          <li><strong>放物線から外れた経路</strong> — 経路を少しずらすだけで作用が大きく変わり、隣り合う経路の矢印がてんでばらばらの向きを向く。足し合わせるとぐるぐる回って打ち消し合い、ほとんど何も残らない</li>
+          <li><strong>放物線のまわりの経路</strong> — 作用が停留値をとる経路のまわりでは、経路を少しずらしても作用がほとんど変わらない。隣り合う矢印がそろった向きを向き、足し合わせると強め合って長い矢印が残る</li>
+        </ul>
+
+        <p>
+          第2章で、最小作用の原理は<strong>最小であることではなく、まわりとくらべて変化しないこと</strong>が効いていると書きました。その理由がここにあります。<br />
+          変化しないから、矢印の向きがそろう。そろうから、そこだけが生き残る。
+        </p>
+
+        <p>
+          数字で見てみます。<br />
+          1秒で上がって落ちてくる野球のボールの作用は、大きさにしておよそ 0.6 J·s。これを <math><mrow><mi>ℏ</mi></mrow></math> で割ると、矢印の回転角はおよそ 5×10<sup>33</sup> ラジアンになります。<br />
+          経路をほんのわずかずらして作用が 10<sup>−30</sup> J·s 変わっただけでも、矢印は約1万ラジアン回ってしまう。放物線から少しでも外れた経路は、たちまち打ち消し合いの渦に飲み込まれます。
+        </p>
+
+        <p>
+          一方、原子の中の電子では、作用が <math><mrow><mi>ℏ</mi></mrow></math> と同じくらいの大きさしかありません。<br />
+          矢印が十分に打ち消し合わないので、1本の線に絞り込まれず、波としての性質がそのまま表に出てきます。
+        </p>
+
+        <p>
+          作用にくらべて <math><mrow><mi>ℏ</mi></mrow></math> が無視できるほど小さい極限を<strong>古典極限</strong>と呼びます。この極限で、量子力学はニュートン力学に一致します。<br />
+          <strong>私たちが日常で見る放物線は、無数の経路の干渉を勝ち抜いて生き残った、いちばん太い束の残像だったのです。</strong>
+        </p>
+      </section>
+
+      <section class="p-section" id="schrodinger">
+        <h2><span class="p-secnum">3-2</span>シュレディンガー方程式（演算子と状態）</h2>
+
+        <h3>変数から演算子へ</h3>
+
+        <p>
+          経路積分がラグランジュ形式の子孫だとすれば、ハミルトン形式の子孫はもう一方の量子力学です。<br />
+          ここでは、衝撃的な置き換えが行われます。
+        </p>
+
+        <p>
+          第2章では、位置 <math><mrow><mi>q</mi></mrow></math> と運動量 <math><mrow><mi>p</mi></mrow></math> は相空間の座標、つまりただの数でした。<br />
+          量子力学では、これらが<strong>波に働きかける操作（演算子）</strong>に姿を変えます。区別のため、記号の上に ^ を付けます。
+        </p>
+
+        <ul>
+          <li>位置 <math><mrow><mover accent="true"><mi>q</mi><mo stretchy="false">^</mo></mover></mrow></math> — 波に、その場所の座標を掛ける</li>
+          <li>運動量 <math><mrow><mover accent="true"><mi>p</mi><mo stretchy="false">^</mo></mover></mrow></math> — 波を場所で微分して、<math><mrow><mo>−</mo><mi>i</mi><mi>ℏ</mi></mrow></math> を掛ける</li>
+        </ul>
+
+        <div class="p-math">
+          <math display="block"><mrow><mover accent="true"><mi>p</mi><mo stretchy="false">^</mo></mover><mo>=</mo><mo>−</mo><mi>i</mi><mi>ℏ</mi><mfrac><mrow><mo>∂</mo></mrow><mrow><mo>∂</mo><mi>q</mi></mrow></mfrac></mrow></math>
+          <p class="p-math__note">運動量は、波の空間的な揺れ具合を測る操作になる。</p>
+        </div>
+
+        <p>
+          ただの数どうしなら、掛ける順番を入れ替えても答えは同じです。ところが演算子では、順番を入れ替えると結果が変わります。<br />
+          実際に波 <math><mrow><mi>ψ</mi></mrow></math> に作用させて確かめてみましょう。
+        </p>
+
+        <div class="p-math">
+          <math display="block">
+            <mtable columnalign="right center left">
+              <mtr>
+                <mtd><mrow><mover accent="true"><mi>q</mi><mo stretchy="false">^</mo></mover><mover accent="true"><mi>p</mi><mo stretchy="false">^</mo></mover><mi>ψ</mi></mrow></mtd>
+                <mtd><mo>=</mo></mtd>
+                <mtd><mrow><mi>q</mi><mrow><mo>(</mo><mo>−</mo><mi>i</mi><mi>ℏ</mi><mfrac><mrow><mo>∂</mo><mi>ψ</mi></mrow><mrow><mo>∂</mo><mi>q</mi></mrow></mfrac><mo>)</mo></mrow></mrow></mtd>
+              </mtr>
+              <mtr>
+                <mtd><mrow></mrow></mtd>
+                <mtd><mo>=</mo></mtd>
+                <mtd><mrow><mo>−</mo><mi>i</mi><mi>ℏ</mi><mi>q</mi><mfrac><mrow><mo>∂</mo><mi>ψ</mi></mrow><mrow><mo>∂</mo><mi>q</mi></mrow></mfrac></mrow></mtd>
+              </mtr>
+              <mtr>
+                <mtd><mrow><mover accent="true"><mi>p</mi><mo stretchy="false">^</mo></mover><mover accent="true"><mi>q</mi><mo stretchy="false">^</mo></mover><mi>ψ</mi></mrow></mtd>
+                <mtd><mo>=</mo></mtd>
+                <mtd><mrow><mo>−</mo><mi>i</mi><mi>ℏ</mi><mfrac><mrow><mo>∂</mo></mrow><mrow><mo>∂</mo><mi>q</mi></mrow></mfrac><mrow><mo>(</mo><mi>q</mi><mi>ψ</mi><mo>)</mo></mrow></mrow></mtd>
+              </mtr>
+              <mtr>
+                <mtd><mrow></mrow></mtd>
+                <mtd><mo>=</mo></mtd>
+                <mtd><mrow><mo>−</mo><mi>i</mi><mi>ℏ</mi><mrow><mo>(</mo><mi>ψ</mi><mo>+</mo><mi>q</mi><mfrac><mrow><mo>∂</mo><mi>ψ</mi></mrow><mrow><mo>∂</mo><mi>q</mi></mrow></mfrac><mo>)</mo></mrow></mrow></mtd>
+              </mtr>
+            </mtable>
+          </math>
+          <p class="p-math__note">4行目は積の微分。ψ の項が1つ余分に出る。</p>
+        </div>
+
+        <p>
+          <math><mrow><mover accent="true"><mi>q</mi><mo stretchy="false">^</mo></mover><mover accent="true"><mi>p</mi><mo stretchy="false">^</mo></mover><mi>ψ</mi></mrow></math> から <math><mrow><mover accent="true"><mi>p</mi><mo stretchy="false">^</mo></mover><mover accent="true"><mi>q</mi><mo stretchy="false">^</mo></mover><mi>ψ</mi></mrow></math> を引くと、<math><mrow><mi>q</mi><mfrac><mrow><mo>∂</mo><mi>ψ</mi></mrow><mrow><mo>∂</mo><mi>q</mi></mrow></mfrac></mrow></math> の項が打ち消し合い、<math><mrow><mi>ψ</mi></mrow></math> だけが残ります。
+        </p>
+
+        <div class="p-math">
+          <math display="block"><mrow><mrow><mo>(</mo><mover accent="true"><mi>q</mi><mo stretchy="false">^</mo></mover><mover accent="true"><mi>p</mi><mo stretchy="false">^</mo></mover><mo>−</mo><mover accent="true"><mi>p</mi><mo stretchy="false">^</mo></mover><mover accent="true"><mi>q</mi><mo stretchy="false">^</mo></mover><mo>)</mo></mrow><mi>ψ</mi><mo>=</mo><mi>i</mi><mi>ℏ</mi><mi>ψ</mi><mo>,</mo><mspace width="1.6em" /><mrow><mo>[</mo><mover accent="true"><mi>q</mi><mo stretchy="false">^</mo></mover><mo>,</mo><mover accent="true"><mi>p</mi><mo stretchy="false">^</mo></mover><mo>]</mo></mrow><mo>=</mo><mi>i</mi><mi>ℏ</mi></mrow></math>
+          <p class="p-math__note">正準交換関係。</p>
+        </div>
+
+        <p>
+          <strong>掛ける順番を入れ替えられない。</strong>この性質が、あとで見る不確定性の源になります。
+        </p>
+
+        <p>
+          第2章で「位置と運動量の対等なペアこそが、第3章で演算子に姿を変える直前の形」と書きました。<br />
+          そのペアはここで、<strong>順番を入れ替えると <math><mrow><mi>i</mi><mi>ℏ</mi></mrow></math> だけずれるペア</strong>に生まれ変わったわけです。
+        </p>
+
+        <div class="p-aside">
+          <p class="p-aside__title">【一歩先の視点】ポアソン括弧と正準量子化</p>
+          <p>
+            古典力学にも、この交換関係にそっくりな構造がありました。ポアソン括弧です。
+          </p>
+          <div class="p-math">
+            <math display="block"><mrow><mrow><mo>{</mo><mi>f</mi><mo>,</mo><mi>g</mi><mo>}</mo></mrow><mo>=</mo><mfrac><mrow><mo>∂</mo><mi>f</mi></mrow><mrow><mo>∂</mo><mi>q</mi></mrow></mfrac><mfrac><mrow><mo>∂</mo><mi>g</mi></mrow><mrow><mo>∂</mo><mi>p</mi></mrow></mfrac><mo>−</mo><mfrac><mrow><mo>∂</mo><mi>f</mi></mrow><mrow><mo>∂</mo><mi>p</mi></mrow></mfrac><mfrac><mrow><mo>∂</mo><mi>g</mi></mrow><mrow><mo>∂</mo><mi>q</mi></mrow></mfrac></mrow></math>
+            <p class="p-math__note">ポアソン括弧。</p>
+          </div>
+          <p>
+            位置と運動量を入れると <math><mrow><mrow><mo>{</mo><mi>q</mi><mo>,</mo><mi>p</mi><mo>}</mo></mrow><mo>=</mo><mn>1</mn></mrow></math> 。さらに正準方程式は、どんな量 <math><mrow><mi>f</mi></mrow></math> についても <math><mrow><mover accent="true"><mi>f</mi><mo>˙</mo></mover><mo>=</mo><mrow><mo>{</mo><mi>f</mi><mo>,</mo><mi>H</mi><mo>}</mo></mrow></mrow></math> という1本の式にまとめられます。
+          </p>
+          <p>
+            ディラックは、この古典の括弧を「交換子を <math><mrow><mi>i</mi><mi>ℏ</mi></mrow></math> で割ったもの」に置き換えれば量子力学になることを見抜きました。
+          </p>
+          <div class="p-math">
+            <math display="block">
+              <mtable columnalign="right center left">
+                <mtr>
+                  <mtd><mrow><mrow><mo>{</mo><mi>q</mi><mo>,</mo><mi>p</mi><mo>}</mo></mrow><mo>=</mo><mn>1</mn></mrow></mtd>
+                  <mtd><mo>⟶</mo></mtd>
+                  <mtd><mrow><mrow><mo>[</mo><mover accent="true"><mi>q</mi><mo stretchy="false">^</mo></mover><mo>,</mo><mover accent="true"><mi>p</mi><mo stretchy="false">^</mo></mover><mo>]</mo></mrow><mo>=</mo><mi>i</mi><mi>ℏ</mi></mrow></mtd>
+                </mtr>
+                <mtr>
+                  <mtd><mrow><mover accent="true"><mi>f</mi><mo>˙</mo></mover><mo>=</mo><mrow><mo>{</mo><mi>f</mi><mo>,</mo><mi>H</mi><mo>}</mo></mrow></mrow></mtd>
+                  <mtd><mo>⟶</mo></mtd>
+                  <mtd><mrow><mfrac><mrow><mi>d</mi><mover accent="true"><mi>A</mi><mo stretchy="false">^</mo></mover></mrow><mrow><mi>d</mi><mi>t</mi></mrow></mfrac><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>i</mi><mi>ℏ</mi></mrow></mfrac><mrow><mo>[</mo><mover accent="true"><mi>A</mi><mo stretchy="false">^</mo></mover><mo>,</mo><mover accent="true"><mi>H</mi><mo stretchy="false">^</mo></mover><mo>]</mo></mrow></mrow></mtd>
+                </mtr>
+              </mtable>
+            </math>
+            <p class="p-math__note">左が古典力学、右が量子力学。上は正準交換関係、下はハイゼンベルクの運動方程式。</p>
+          </div>
+          <p>
+            解析力学の骨組みは、量子力学に上書きされたのではありません。<strong>記号を置き換えただけで、そっくり受け継がれた</strong>のです。
+          </p>
+        </div>
+
+        <h3>シュレディンガー方程式 — ハミルトニアンが波を動かす</h3>
+
+        <p>
+          ハミルトン形式の中心は、全エネルギー <math><mrow><mi>H</mi><mo>=</mo><mi>K</mi><mo>+</mo><mi>U</mi></mrow></math> でした。<br />
+          運動量を演算子に置き換えると、これも演算子になります。それがハミルトニアン <math><mrow><mover accent="true"><mi>H</mi><mo stretchy="false">^</mo></mover></mrow></math> です。
+        </p>
+
+        <div class="p-math">
+          <math display="block"><mrow><mover accent="true"><mi>H</mi><mo stretchy="false">^</mo></mover><mo>=</mo><mfrac><mrow><msup><mover accent="true"><mi>p</mi><mo stretchy="false">^</mo></mover><mn>2</mn></msup></mrow><mrow><mn>2</mn><mi>m</mi></mrow></mfrac><mo>+</mo><mi>U</mi><mrow><mo>(</mo><mi>q</mi><mo>)</mo></mrow><mo>=</mo><mo>−</mo><mfrac><mrow><msup><mi>ℏ</mi><mn>2</mn></msup></mrow><mrow><mn>2</mn><mi>m</mi></mrow></mfrac><mfrac><mrow><msup><mo>∂</mo><mn>2</mn></msup></mrow><mrow><mo>∂</mo><msup><mi>q</mi><mn>2</mn></msup></mrow></mfrac><mo>+</mo><mi>U</mi><mrow><mo>(</mo><mi>q</mi><mo>)</mo></mrow></mrow></math>
+          <p class="p-math__note">運動エネルギーの運動量を演算子に置き換えると、2階微分が現れる。</p>
+        </div>
+
+        <p>
+          このハミルトニアンを使って書かれるのが、量子力学の基本方程式です。
+        </p>
+
+        <div class="p-math">
+          <math display="block"><mrow><mi>i</mi><mi>ℏ</mi><mfrac><mrow><mo>∂</mo><mi>ψ</mi></mrow><mrow><mo>∂</mo><mi>t</mi></mrow></mfrac><mo>=</mo><mover accent="true"><mi>H</mi><mo stretchy="false">^</mo></mover><mi>ψ</mi></mrow></math>
+          <p class="p-math__note">シュレディンガー方程式（1926年）。</p>
+        </div>
+
+        <ul>
+          <li><math><mrow><mi>ψ</mi></mrow></math>（波動関数）— いま、どんな波として存在しているか</li>
+          <li><math><mrow><mover accent="true"><mi>H</mi><mo stretchy="false">^</mo></mover></mrow></math>（ハミルトニアン）— 波を未来へ進めるエンジン</li>
+        </ul>
+
+        <p>
+          第2章では、全エネルギー <math><mrow><mi>H</mi></mrow></math> のガイドに従って、相空間の点が流れていきました。量子力学では、同じ <math><mrow><mi>H</mi></mrow></math> が今度は波を未来へ押し流します。<br />
+          ハミルトン形式が描いた「エネルギーが状態を動かす」という像は、そのまま波の時間発展として引き継がれています。
+        </p>
+
+        <p>
+          そしてこの方程式は、いまの <math><mrow><mi>ψ</mi></mrow></math> が決まれば未来の <math><mrow><mi>ψ</mi></mrow></math> を一意に決めます。<br />
+          決定論は、軌道の上ではなく<strong>波の上で</strong>生き残っているのです。
+        </p>
+
+        <h3>不確定性原理の正体</h3>
+
+        <p>
+          位置と運動量を、同時にいくらでも正確に決めることはできない。これが不確定性原理です。
+        </p>
+
+        <div class="p-math">
+          <math display="block"><mrow><mi>Δ</mi><mi>q</mi><mspace width="0.1em" /><mi>Δ</mi><mi>p</mi><mo>≥</mo><mfrac><mrow><mi>ℏ</mi></mrow><mrow><mn>2</mn></mrow></mfrac></mrow></math>
+          <p class="p-math__note">位置のばらつきと運動量のばらつきの積には、下限がある。</p>
+        </div>
+
+        <p>
+          序章でも書いたように、これは測定機器の性能が悪いからではありません。粒子が本質的に<strong>広がりを持つ波</strong>であることの帰結です。
+        </p>
+
+        <p>
+          ド・ブロイの関係 <math><mrow><mi>p</mi><mo>=</mo><mfrac><mrow><mi>h</mi></mrow><mrow><mi>λ</mi></mrow></mfrac></mrow></math> によれば、運動量は波長で決まります。<br />
+          波をある1点に鋭く絞り込もうとすると、さまざまな波長の波を重ね合わせる必要がある。すると波長、つまり運動量がばらつく。逆に波長をひとつにそろえると、波は空間全体に広がって位置が決まらない。<br />
+          <strong>位置を絞れば運動量が散り、運動量を絞れば位置が散る。</strong>これは波という数学的な対象そのものが持つ性質です。
+        </p>
+
+        <p>
+          交換関係 <math><mrow><mrow><mo>[</mo><mover accent="true"><mi>q</mi><mo stretchy="false">^</mo></mover><mo>,</mo><mover accent="true"><mi>p</mi><mo stretchy="false">^</mo></mover><mo>]</mo></mrow><mo>=</mo><mi>i</mi><mi>ℏ</mi></mrow></math> から、この不等式を直接導くこともできます。順番を入れ替えられない2つの量は、同時にぴたりと値を持つことができないのです。
+        </p>
+
+        <p>
+          ラプラスの悪魔が要求した「すべての粒子の正確な位置と運動量」は、こうして原理的に存在しない入力になりました。
+        </p>
+
+        <h3>第3章のまとめ</h3>
+
+        <figure class="p-figure is-wide">
+          <figcaption class="p-table__caption" id="cap-summary3">古典力学と量子力学。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-table-wrap" tabindex="0" role="region" aria-labelledby="cap-summary3">
+            <table class="p-table" aria-labelledby="cap-summary3">
+              <thead>
+                <tr>
+                  <th scope="col">　</th>
+                  <th scope="col">古典力学（ニュートン・解析力学）</th>
+                  <th scope="col">量子力学</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">物体の状態</th>
+                  <td>位置 <math><mrow><mi>q</mi></mrow></math> と運動量 <math><mrow><mi>p</mi></mrow></math>（相空間の1点）</td>
+                  <td>波動関数 <math><mrow><mi>ψ</mi></mrow></math>（広がりを持つ波）</td>
+                </tr>
+                <tr>
+                  <th scope="row">運動の決まり方</th>
+                  <td>作用が停留になる1本の経路をたどる</td>
+                  <td>すべての経路を同時に通り、波が干渉する</td>
+                </tr>
+                <tr>
+                  <th scope="row">物理量の扱い</th>
+                  <td>ただの数</td>
+                  <td>状態に作用する演算子</td>
+                </tr>
+                <tr>
+                  <th scope="row">古典力学の位置づけ</th>
+                  <td>基本法則そのもの</td>
+                  <td>作用が <math><mrow><mi>ℏ</mi></mrow></math> よりずっと大きいときの極限</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </figure>
+      </section>
+
+      <section class="p-section" id="whole-story">
+        <h2><span class="p-secnum">3-3</span>全体のまとめ（物理学の1本のストーリー）</h2>
+
+        <p>
+          序章で、投げたボールの放物線を3つの視点から並べました。<br />
+          3つの章を読み終えたいま、その意味がはっきりします。
+        </p>
+
+        <h3>3つの視点、ふたたび</h3>
+
+        <ul class="p-forms">
+          <li>
+            <div class="p-form">
+              <p class="p-form__num">第1章 ／ 局所の視点</p>
+              <h4 class="p-form__title"><a href="/physics/newton/">ニュートン力学</a> — 瞬間の力を見る</h4>
+              <p class="p-form__lead">
+                <math><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">→</mo></mover><mo>=</mo><mi>m</mi><mover accent="true"><mi>a</mi><mo stretchy="false">→</mo></mover></mrow></math> を空間と時間で積算して、エネルギーと運動量という「まとめ算」を手に入れた。<br />
+                そして、位置と運動量が分かれば未来が決まるという決定論にたどり着いた。
+              </p>
+            </div>
+          </li>
+          <li>
+            <div class="p-form">
+              <p class="p-form__num">第2章 ／ 大局の視点</p>
+              <h4 class="p-form__title"><a href="/physics/analytical/">解析力学</a> — 経路の全体を見る</h4>
+              <p class="p-form__lead">
+                力を脱ぎ捨て、エネルギーと運動量を主役にした。作用が停留になる経路を選ぶ、という最小作用の原理を打ち立てた。<br />
+                ただし「なぜ停留なのか」は、謎として残った。
+              </p>
+            </div>
+          </li>
+          <li>
+            <div class="p-form">
+              <p class="p-form__num">第3章 ／ 根本の視点</p>
+              <h4 class="p-form__title">量子力学 — すべての経路を見る</h4>
+              <p class="p-form__lead">
+                すべての経路を通る波が干渉し合い、作用が停留になる経路のまわりだけが生き残る。<br />
+                そこに、ニュートン力学の放物線が立ち現れることを解き明かした。
+              </p>
+            </div>
+          </li>
+        </ul>
+
+        <h3>結び</h3>
+
+        <div class="p-ending">
+          <p>
+            物理学の歴史は、古い法則を捨てて新しい法則で上書きしてきた歴史ではありません。
+          </p>
+          <p>
+            ニュートンが描いた「力と運動」は、解析力学によって「作用が停留する経路」へと書き直され、量子力学によって「無数の波が織りなす干渉の残像」として、もう一度説明し直されました。<br />
+            どの段階でも、前の理論は間違いとして捨てられたのではなく、より深い理論の近似として、正しい居場所を与えられています。
+          </p>
+          <p>
+            あなたが投げたボールが描く放物線。<br />
+            それは、あらゆる経路を通った波が互いに響き合い、打ち消し合った末に残った、たった1本の線なのです。
+          </p>
+        </div>
+      </section>
+
+      <a class="p-next" href="/physics/prologue/" aria-labelledby="next-prologue">
+        <p class="p-next__label">もう一度はじめから</p>
+        <p class="p-next__title" id="next-prologue">序章　物理学は、一度完成した</p>
+        <p class="p-next__desc">
+          3つの章を読んだあとで序章に戻ると、ラプラスの悪魔も、居心地の悪い問いも、違って見えるはずです。
+        </p>
+      </a>
+
+    </div>
+  </div>
+</main>
+
+<footer class="l-footer">
+  <div class="l-container">
+    <p>mutexn</p>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -230,6 +230,9 @@
      MathML Core は mtable の columnalign を解釈しないので CSS で指定する
      （左辺は右寄せ、等号は中央、右辺は左寄せ） */
   .p-math mtd { text-align: center; }
+  /* mtable のセルは既定で行内サイズ（分数や積分記号が縮む）になるので、
+     独立した式と同じ大きさで組む */
+  .p-math mtd { math-style: normal; }
   .p-math mtd:nth-child(1) { text-align: right; }
   .p-math mtd:nth-child(3) { text-align: left; }
   /* 式に添える注記: Std-16N-170。gray-50 の上なので gray-800（11.29:1） */
@@ -290,13 +293,33 @@
     white-space: nowrap;
   }
 
-  /* ----- 次章への導線 ----- */
+  /* .p-prose a の下線・色は本文中のテキストリンク用。
+     ブロック全体を包むリンクには効かせない（下線はタイトルだけに付ける） */
+  .p-prose a.p-next {
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+
+  /* ----- 次章への導線 -----
+     DADS: コンテナ自体をクリッカブルエリア（フォーカス可能エリア）にできる。
+     その場合、コンテナ内に別のリンクを置いてはいけない */
   .p-next {
+    display: block;
     margin-top: 64px;
     padding: 20px;
     background: var(--gray-50);
     border: 1px solid var(--gray-420);
     border-radius: 8px;
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+  a.p-next:hover { border-color: var(--gray-900); }
+  /* 大きな領域がフォーカス可能なので、全面を黄色で塗らずリング状の2重構造にする */
+  a.p-next:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    background-color: var(--gray-50);
+    box-shadow: 0 0 0 4px var(--focus-yellow);
   }
   /* gray-50 の上に載るので gray-800（11.29:1） */
   .p-next__label {
@@ -306,7 +329,8 @@
     color: var(--gray-800);
     font-feature-settings: 'palt';
   }
-  /* Std-20B-150 */
+  /* Std-20B-150。
+     DADS: コンテナ自体がリンクの場合もタイトルにアンダーラインを付与する */
   .p-next__title {
     margin: 0 0 12px;
     font-size: 20px;
@@ -314,6 +338,15 @@
     line-height: 1.5;
     letter-spacing: 0.02em;
   }
+  a.p-next .p-next__title {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  a.p-next:visited .p-next__title { color: var(--link-visited); }
+  a.p-next:hover .p-next__title { text-decoration-thickness: 3px; }
+  a.p-next:active .p-next__title { color: var(--link-active); }
   .p-next__desc {
     margin: 0;
     font-size: 16px;
@@ -929,16 +962,14 @@
         </p>
       </section>
 
-      <div class="p-next">
+      <a class="p-next" href="/physics/analytical/" aria-labelledby="next-analytical">
         <p class="p-next__label">次の章</p>
-        <p class="p-next__title">
-          第2章　解析力学 — エネルギーから運動を求める<span class="p-status">準備中</span>
-        </p>
+        <p class="p-next__title" id="next-analytical">第2章　解析力学 — エネルギーから運動を求める</p>
         <p class="p-next__desc">
-          ボールは投げられたから飛ぶのではない。「一番マシな道」を選んで飛んでいる。<br />
-          最小作用の原理から運動方程式を導き直します。
+          力という主役を降ろし、エネルギーと運動量で運動を書き直します。<br />
+          一般化座標で拘束力を消し、最小作用の原理から運動方程式を導き直す。そして相空間と正準方程式へ。
         </p>
-      </div>
+      </a>
 
     </div>
   </div>
