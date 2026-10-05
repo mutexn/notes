@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SMA 設計編 — Cloudflare で組み立てる</title>
+<meta name="description" content="SMA（Site Management Agent）を Cloudflare の上に組み立てる。Durable Objects・Workflows・Artifacts・D1・R2 を使った構成、データモデル、公開と配信の流れを図で示す。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  /* =======================================================================
+     デジタル庁デザインシステム（DADS）準拠
+     カラー値の出典: @digital-go-jp/design-tokens v2.0.1
+     トークンと l- / p- の命名は app/index.html と app/physics/ に揃える
+     ======================================================================= */
+  :root {
+    --white: #ffffff;
+    --gray-50: #f2f2f2;
+    --gray-420: #949494;   /* 対白 3.03:1  非テキスト下限 */
+    --gray-536: #767676;   /* 対白 4.54:1  テキスト下限 */
+    --gray-800: #333333;   /* 対白 12.63:1 */
+    --gray-900: #1a1a1a;   /* 対白 17.40:1 */
+    --black: #000000;
+    --link: #0017c1;           /* blue-900     対白 11.10:1 */
+    --link-visited: #8b008b;   /* magenta-900  対白  8.50:1 */
+    --link-active: #ac3e00;    /* orange-900   対白  6.10:1 */
+    --focus-yellow: #ffd43d;   /* yellow-300   フォーカス（変更禁止） */
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--white);
+    color: var(--gray-900);
+    /* Std-17N-170 */
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 17px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    /* 文節を単位に折る */
+    word-break: auto-phrase;
+    /* 小書き仮名・長音符を行頭に置かない */
+    line-break: strict;
+    /* 最終行に 1〜2 文字だけ残る折り返しを避ける */
+    text-wrap: pretty;
+  }
+
+  h1, h2, h3 { text-wrap: balance; }
+
+  /* ----- フォーカスインジケーター: Yellow-300 と Black の2重構造 ----- */
+  a:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 2px;
+    background-color: var(--focus-yellow);
+    color: var(--gray-900);
+    box-shadow: 0 0 0 2px var(--focus-yellow);
+    text-decoration-color: var(--gray-900);
+  }
+
+  /* ----- レイアウト ----- */
+  .l-container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .l-main { padding: 24px 0 80px; }
+
+  /* ----- パンくず ----- */
+  .l-breadcrumb {
+    padding: 24px 0 0;
+    /* Std-16N-170 */
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-breadcrumb ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 8px;
+  }
+  .l-breadcrumb li { display: flex; align-items: center; gap: 8px; }
+  .l-breadcrumb li + li::before { content: '\203A'; color: var(--gray-536); }
+
+  /* ----- 本文カラム: 読み物は幅を絞る ----- */
+  .p-prose { max-width: 720px; }
+
+  /* Std-45B-140 */
+  h1 {
+    font-size: 45px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0;
+    margin: 0 0 8px;
+  }
+  /* Std-24N-150 */
+  .p-subtitle {
+    margin: 0 0 1em;
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+
+  .p-prose p { margin: 0 0 1.2em; }
+  .p-prose ul, .p-prose ol { margin: 0 0 1.2em; padding-left: 1.6em; }
+  .p-prose li { margin-bottom: 0.5em; }
+
+  /* Std-32B-150 */
+  .p-prose h2 {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    margin: 0 0 0.6em;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gray-420);
+  }
+  /* 章番号。見出しの上に小さく置く: Std-16N-170 */
+  .p-prose h2 .p-secnum {
+    display: block;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-536);
+  }
+  /* Std-24B-150 */
+  .p-prose h3 {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    margin: 1.6em 0 0.5em;
+  }
+
+  .p-section { margin-top: 64px; }
+
+  /* キャッチコピー: Std-20N-150 */
+  .p-catch {
+    margin: 0 0 1.2em;
+    font-size: 20px;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+
+  /* ----- 本文中のリンク: 色以外にも下線で示す ----- */
+  .p-prose a, .l-breadcrumb a {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  .p-prose a:visited, .l-breadcrumb a:visited { color: var(--link-visited); }
+  .p-prose a:hover, .l-breadcrumb a:hover { text-decoration-thickness: 3px; }
+  .p-prose a:active, .l-breadcrumb a:active { color: var(--link-active); }
+
+  /* ----- ページ内目次 ----- */
+  .p-toc {
+    margin: 0 0 8px;
+    padding: 20px 24px;
+    background: var(--white);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+  }
+  .p-toc__title {
+    margin: 0 0 8px;
+    /* Std-16B-170 */
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+  .p-prose .p-toc ol {
+    margin: 0;
+    padding-left: 1.4em;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .p-prose .p-toc li { margin-bottom: 0.25em; }
+  .p-prose .p-toc li:last-child { margin-bottom: 0; }
+
+  /* ----- 補足ブロック -----
+     DADS の注釈ブロックは補足情報用で、文脈の切り替えには使わない規定のため独自に組む。
+     境界は影ではなく罫線で示す（--gray-420 は対白 3:1 以上） */
+  .p-aside {
+    margin: 2em 0;
+    padding: 20px 24px;
+    background: var(--gray-50);
+    border-left: 4px solid var(--gray-420);
+  }
+  /* Std-18B-160 */
+  .p-aside__title {
+    margin: 0 0 0.5em;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+  }
+  .p-prose .p-aside p { margin: 0 0 1em; }
+  .p-prose .p-aside p:last-child { margin-bottom: 0; }
+
+  /* ----- 対比表 -----
+     DADS の高密度用途は行高 130% だが、和文の可読性を優先して 1.4 を下限とする */
+  /* 横スクロールする領域はキーボードでも操作できるよう tabindex="0" と role="region" を付ける */
+  .p-table-wrap { margin: 0; overflow-x: auto; }
+  .p-table-wrap:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    box-shadow: 0 0 0 4px var(--focus-yellow);
+  }
+  .p-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+  /* 見出しセルの背景が gray-50 のため、罫線は gray-536（対 gray-50 4.06:1）を使う */
+  .p-table th, .p-table td {
+    padding: 12px;
+    border: 1px solid var(--gray-536);
+    text-align: left;
+    vertical-align: top;
+  }
+  .p-figure { margin: 1.5em 0; }
+  /* Std-16N-170 */
+  .p-table__caption {
+    margin: 0 0 8px;
+    font-size: 16px;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-536);
+    text-align: left;
+  }
+  /* 横スクロールの手がかり。スクロールが起きる幅でだけ出す */
+  .p-table__hint { display: none; }
+  .p-table thead th {
+    background: var(--gray-50);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .p-table tbody th {
+    background: var(--gray-50);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* ----- 図（インライン SVG）-----
+     SVG は viewBox の幅で原寸表示する。縮小すると図中の文字が 14px を下回るため、
+     狭い画面では表と同じく横スクロールに切り替える（tabindex="0" と role="region" を付ける） */
+  .p-diagram { margin: 1.5em 0; }
+  .p-diagram__scroll { overflow-x: auto; }
+  .p-diagram__scroll:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    box-shadow: 0 0 0 4px var(--focus-yellow);
+  }
+  .p-diagram svg { display: block; max-width: none; }
+
+  /* 図の部品。罫線は gray-900、まとまりの枠は gray-536（対白 4.54:1、対 gray-50 4.06:1） */
+  .d-box { fill: var(--white); stroke: var(--gray-900); stroke-width: 1.5; }
+  .d-group { fill: var(--gray-50); stroke: var(--gray-536); stroke-width: 1; }
+  /* 論点になる要素だけ blue-900 で強調する */
+  .d-accent { stroke: var(--link); stroke-width: 2; }
+  .d-line { fill: none; stroke: var(--gray-900); stroke-width: 1.5; }
+  .d-line--accent { stroke: var(--link); stroke-width: 2; }
+  .d-line--dashed { stroke-dasharray: 6 4; }
+  .d-head { fill: var(--gray-900); }
+  .d-head--accent { fill: var(--link); }
+  /* 図中の文字は 14px 以上 */
+  .d-label { fill: var(--gray-900); font-size: 15px; font-weight: 700; }
+  .d-text { fill: var(--gray-900); font-size: 14px; }
+  .d-note { fill: var(--gray-800); font-size: 14px; }
+  .d-note--accent { fill: var(--link); font-weight: 700; }
+  /* 線の上に重なるラベルの下地。背後の線を隠す */
+  .d-mask { fill: var(--white); }
+
+  /* .p-prose a の下線・色は本文中のテキストリンク用。
+     ブロック全体を包むリンクには効かせない（下線はタイトルだけに付ける） */
+  .p-prose a.p-next {
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+
+  /* ----- 次章への導線 -----
+     DADS: コンテナ自体をクリッカブルエリア（フォーカス可能エリア）にできる。
+     その場合、コンテナ内に別のリンクを置いてはいけない */
+  .p-next {
+    display: block;
+    margin-top: 64px;
+    padding: 20px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+  a.p-next:hover { border-color: var(--gray-900); }
+  /* 大きな領域がフォーカス可能なので、全面を黄色で塗らずリング状の2重構造にする */
+  a.p-next:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    background-color: var(--gray-50);
+    box-shadow: 0 0 0 4px var(--focus-yellow);
+  }
+  /* gray-50 の上に載るので gray-800（11.29:1） */
+  .p-next__label {
+    margin: 0 0 4px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+    font-feature-settings: 'palt';
+  }
+  /* Std-20B-150。
+     DADS: コンテナ自体がリンクの場合もタイトルにアンダーラインを付与する */
+  .p-next__title {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+  a.p-next .p-next__title {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  a.p-next:visited .p-next__title { color: var(--link-visited); }
+  a.p-next:hover .p-next__title { text-decoration-thickness: 3px; }
+  a.p-next:active .p-next__title { color: var(--link-active); }
+  .p-next__desc {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+  }
+  /* ----- インラインコード: URL やコードだけは任意位置で折る ----- */
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.94em;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* ----- 参考 ----- */
+  .p-refs {
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  /* ----- フッター ----- */
+  .l-footer {
+    border-top: 1px solid var(--gray-420);
+    padding: 24px 0 40px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-footer p { margin: 0; }
+
+  /* ----- モバイル・タブレット: 768px 未満 ----- */
+  @media (max-width: 767px) {
+    body {
+      /* Std-16N-175 */
+      font-size: 16px;
+      line-height: 1.75;
+    }
+    .l-container { padding: 0 16px; }
+    .l-main { padding: 16px 0 56px; }
+    .l-breadcrumb { padding-top: 16px; }
+    /* Std-32B-150 */
+    h1 {
+      font-size: 32px;
+      line-height: 1.5;
+      letter-spacing: 0.01em;
+    }
+    /* Std-20N-150 */
+    .p-subtitle { font-size: 20px; }
+    /* Std-28B-150 */
+    .p-prose h2 { font-size: 28px; }
+    /* Std-22B-150 */
+    .p-prose h3 { font-size: 22px; }
+    .p-section { margin-top: 48px; }
+    /* Std-18N-160 */
+    .p-catch { font-size: 18px; line-height: 1.6; }
+    .p-toc { padding: 16px; }
+    .p-aside { padding: 16px; }
+    .p-next { padding: 16px; }
+    /* 3列を 375px に詰め込むと1行あたり数文字になって読めない。
+       列の多い表だけ、列幅を確保して横スクロールに切り替える */
+    .p-figure.is-wide .p-table { min-width: 560px; }
+    .p-figure.is-wide .p-table__hint { display: inline; }
+    .p-diagram .p-table__hint { display: inline; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="l-breadcrumb" aria-label="パンくず">
+  <div class="l-container">
+    <ol>
+      <li><a href="/">目次</a></li>
+      <li><a href="/sma-concept/">SMA 構想</a></li>
+      <li aria-current="page">設計編</li>
+    </ol>
+  </div>
+</nav>
+
+<main class="l-main">
+  <div class="l-container">
+    <div class="p-prose">
+
+      <h1>SMA 設計編</h1>
+      <p class="p-subtitle">Cloudflare で組み立てる</p>
+
+      <p class="p-catch">チェンジセットは Durable Object に、本番はポインタ 1 つに。構想を、動く構成に落とし込む。</p>
+
+      <p>
+        <a href="/sma-concept/">本編</a>では、コード・CMS の構造・コンテンツを等しく扱う CMS として SMA（Site Management Agent）を構想し、その概念設計を示しました。このページでは、それを Cloudflare のサービスの上に具体的に組み立てます。
+      </p>
+
+      <p>このページの前提は次のとおりです。</p>
+
+      <ul>
+        <li>実行基盤はすべて Cloudflare とする</li>
+        <li>図と文章で構成を示し、コードは載せない</li>
+        <li>ストレージは本編の案 A と案 B の両方を扱い、どちらを選ぶべきかを示す</li>
+        <li>配信は、リクエストごとに描画する方式と静的生成の両方に対応させる</li>
+        <li>各サービスの提供状況と制限は、2026 年 10 月時点の公式ドキュメントに基づく</li>
+      </ul>
+
+      <nav class="p-toc" aria-label="このページの目次">
+        <p class="p-toc__title">このページの内容</p>
+        <ol>
+          <li><a href="#arch">全体構成</a></li>
+          <li><a href="#storage">ストレージ：小規模なら A、通常は B</a></li>
+          <li><a href="#content">コンテンツストア</a></li>
+          <li><a href="#access">エージェントの接続と権限</a></li>
+          <li><a href="#lifecycle">チェンジセットの一生</a></li>
+          <li><a href="#preview">検証とプレビュー</a></li>
+          <li><a href="#publish">公開</a></li>
+          <li><a href="#delivery">配信：2 つの方式</a></li>
+          <li><a href="#concurrency">並行制御</a></li>
+          <li><a href="#open">残る課題</a></li>
+          <li><a href="#references">参考</a></li>
+        </ol>
+      </nav>
+
+      <!-- ===== 1 ===== -->
+      <section class="p-section" id="arch">
+        <h2><span class="p-secnum">1</span>全体構成</h2>
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-d1">図 1　全体構成。人間は Access、エージェントは MCP を通じて SMA コアに入り、ストレージには SMA コアだけが触れる。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-d1">
+            <svg width="720" height="432" viewBox="0 0 720 432" role="img" aria-labelledby="cap-d1">
+              <defs>
+                <marker id="d1-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+
+              <rect class="d-box" x="16" y="16" width="200" height="40" rx="4" />
+              <text class="d-text" x="116" y="41" text-anchor="middle">運営者・編集者</text>
+              <rect class="d-box" x="264" y="16" width="200" height="40" rx="4" />
+              <text class="d-text" x="364" y="41" text-anchor="middle">エージェント</text>
+              <rect class="d-box" x="512" y="16" width="192" height="40" rx="4" />
+              <text class="d-text" x="608" y="41" text-anchor="middle">閲覧者</text>
+
+              <line class="d-line" x1="116" y1="56" x2="116" y2="96" marker-end="url(#d1-a)" />
+              <text class="d-note" x="128" y="81">Access で認証</text>
+              <line class="d-line" x1="364" y1="56" x2="364" y2="96" marker-end="url(#d1-a)" />
+              <text class="d-note" x="376" y="81">MCP（OAuth）</text>
+              <line class="d-line" x1="608" y1="56" x2="608" y2="96" marker-end="url(#d1-a)" />
+              <text class="d-note" x="620" y="81">HTTP</text>
+
+              <rect class="d-box" x="16" y="96" width="200" height="40" rx="4" />
+              <text class="d-text" x="116" y="121" text-anchor="middle">管理画面 Worker</text>
+              <rect class="d-box" x="264" y="96" width="200" height="40" rx="4" />
+              <text class="d-text" x="364" y="121" text-anchor="middle">MCP Worker</text>
+              <rect class="d-box" x="512" y="96" width="192" height="40" rx="4" />
+              <text class="d-text" x="608" y="121" text-anchor="middle">フロントエンド Worker</text>
+
+              <line class="d-line" x1="116" y1="136" x2="116" y2="176" marker-end="url(#d1-a)" />
+              <line class="d-line" x1="364" y1="136" x2="364" y2="176" marker-end="url(#d1-a)" />
+              <polyline class="d-line" points="512,116 492,116 492,200 480,200" marker-end="url(#d1-a)" />
+
+              <rect class="d-group d-accent" x="16" y="176" width="464" height="152" rx="6" />
+              <text class="d-label" x="32" y="198">SMA コア</text>
+              <rect class="d-box" x="32" y="208" width="208" height="48" rx="4" />
+              <text class="d-text" x="136" y="228" text-anchor="middle">チェンジセット DO</text>
+              <text class="d-note" x="136" y="247" text-anchor="middle">1 件に 1 つ</text>
+              <rect class="d-box" x="256" y="208" width="208" height="48" rx="4" />
+              <text class="d-text" x="360" y="228" text-anchor="middle">リリース DO</text>
+              <text class="d-note" x="360" y="247" text-anchor="middle">本番のポインタ</text>
+              <rect class="d-box" x="32" y="268" width="208" height="48" rx="4" />
+              <text class="d-text" x="136" y="288" text-anchor="middle">Workflows</text>
+              <text class="d-note" x="136" y="307" text-anchor="middle">検証・承認・公開</text>
+              <rect class="d-box" x="256" y="268" width="208" height="48" rx="4" />
+              <text class="d-text" x="360" y="288" text-anchor="middle">コンテンツ API</text>
+              <text class="d-note" x="360" y="307" text-anchor="middle">版を指定して読む</text>
+
+              <rect class="d-box" x="512" y="268" width="192" height="48" rx="4" />
+              <text class="d-text" x="608" y="288" text-anchor="middle">Workers Builds</text>
+              <text class="d-note" x="608" y="307" text-anchor="middle">ビルドと検証</text>
+              <line class="d-line" x1="480" y1="292" x2="512" y2="292" marker-end="url(#d1-a)" />
+              <line class="d-line" x1="608" y1="268" x2="608" y2="136" marker-end="url(#d1-a)" />
+              <text class="d-note" x="600" y="240" text-anchor="end">版を作る</text>
+
+              <line class="d-line" x1="248" y1="328" x2="248" y2="368" marker-end="url(#d1-a)" />
+              <text class="d-note" x="260" y="353">SMA コアだけが読み書きする</text>
+
+              <rect class="d-box" x="16" y="368" width="160" height="48" rx="4" />
+              <text class="d-text" x="96" y="388" text-anchor="middle">Artifacts</text>
+              <text class="d-note" x="96" y="407" text-anchor="middle">コード・スキーマ</text>
+              <rect class="d-box" x="192" y="368" width="160" height="48" rx="4" />
+              <text class="d-text" x="272" y="388" text-anchor="middle">Durable Objects</text>
+              <text class="d-note" x="272" y="407" text-anchor="middle">コンテンツの版</text>
+              <rect class="d-box" x="368" y="368" width="160" height="48" rx="4" />
+              <text class="d-text" x="448" y="388" text-anchor="middle">D1</text>
+              <text class="d-note" x="448" y="407" text-anchor="middle">索引・サイトグラフ</text>
+              <rect class="d-box" x="544" y="368" width="160" height="48" rx="4" />
+              <text class="d-text" x="624" y="388" text-anchor="middle">R2</text>
+              <text class="d-note" x="624" y="407" text-anchor="middle">メディア・監査ログ</text>
+            </svg>
+          </div>
+        </figure>
+        <figure class="p-figure is-wide">
+          <figcaption class="p-table__caption" id="cap-map">部品と Cloudflare のサービスの対応。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-table-wrap" tabindex="0" role="region" aria-labelledby="cap-map">
+            <table class="p-table" aria-labelledby="cap-map">
+              <thead>
+                <tr>
+                  <th scope="col">部品</th>
+                  <th scope="col">サービス</th>
+                  <th scope="col">役割</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">管理画面</th><td>Workers ＋ Access</td><td>人間が指示・レビュー・承認する</td></tr>
+                <tr><th scope="row">MCP サーバー</th><td>Workers（Agents SDK）</td><td>エージェントの入口。状態は持たない</td></tr>
+                <tr><th scope="row">チェンジセット</th><td>Durable Objects</td><td>1 件に 1 つ。状態・差分・権限・観測ログを持つ</td></tr>
+                <tr><th scope="row">本番のポインタ</th><td>Durable Objects</td><td>全体で 1 つ。現在のリリースと履歴を持ち、公開を直列にする</td></tr>
+                <tr><th scope="row">手順の実行</th><td>Workflows</td><td>検証・承認待ち・公開の長い手順を、再試行つきで進める</td></tr>
+                <tr><th scope="row">ビルドと検証</th><td>Workers Builds、Sandbox</td><td>fork のコードをビルドし、検査する</td></tr>
+                <tr><th scope="row">コード・スキーマ</th><td>Artifacts</td><td>Git 互換のリポジトリ。チェンジセットごとに fork する</td></tr>
+                <tr><th scope="row">コンテンツの版</th><td>Durable Objects（SQLite）</td><td>リビジョンとマニフェストを持つ</td></tr>
+                <tr><th scope="row">索引・サイトグラフ</th><td>D1</td><td>検索と、依存関係の照会</td></tr>
+                <tr><th scope="row">メディア・監査ログ</th><td>R2</td><td>画像と、消せない監査記録</td></tr>
+                <tr><th scope="row">フロントエンド</th><td>Workers（静的アセットを含む）</td><td>サイトを配信する</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </figure>
+
+        <p>
+          この構成の中心にあるのは Durable Object（DO）です。DO は名前で一意に特定でき、1 つの DO の中の処理は単一のスレッドで順に実行され、その記憶領域は強い一貫性を持ちます。チェンジセットの状態遷移や本番のポインタの付け替えを、ロックなしで矛盾なく行えるのはこの性質のおかげです。
+        </p>
+
+        <p>
+          MCP サーバーには状態を持たせません。Agents SDK で以前使われていた <code>McpAgent</code> は、2026 年 10 月時点で非推奨になっており、後継の <code>createMcpHandler</code> はリクエストごとに完結するステートレスな作りです。そこで、エージェントとのやりとりで生じる状態は、すべてチェンジセットの DO に置きます。本編の原則「エージェントにストレージを直接触らせない」は、MCP Worker がチェンジセットの DO を通してしか何もできない、という形で実現されます。
+        </p>
+      </section>
+
+      <!-- ===== 2 ===== -->
+      <section class="p-section" id="storage">
+        <h2><span class="p-secnum">2</span>ストレージ：小規模なら A、通常は B</h2>
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-d2">図 2　案 A はすべてを 1 つの Artifacts リポジトリに置く。案 B は、コード・スキーマ・コンテンツ・索引・メディアを、それぞれ得意な仕組みに分けて置く。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-d2">
+            <svg width="720" height="304" viewBox="0 0 720 304" role="img" aria-labelledby="cap-d2">
+              <!-- 案 A -->
+              <text class="d-label" x="180" y="26" text-anchor="middle">案 A：すべて Artifacts</text>
+              <rect class="d-group" x="16" y="40" width="328" height="196" rx="6" />
+              <text class="d-note" x="180" y="62" text-anchor="middle">本流のリポジトリ（1 つ）</text>
+              <rect class="d-box" x="40" y="72" width="280" height="32" rx="4" />
+              <text class="d-text" x="180" y="93" text-anchor="middle">コード</text>
+              <rect class="d-box" x="40" y="112" width="280" height="32" rx="4" />
+              <text class="d-text" x="180" y="133" text-anchor="middle">スキーマ</text>
+              <rect class="d-box" x="40" y="152" width="280" height="32" rx="4" />
+              <text class="d-text" x="180" y="173" text-anchor="middle">コンテンツ（JSON・Markdown）</text>
+              <rect class="d-box" x="40" y="192" width="280" height="32" rx="4" />
+              <text class="d-text" x="180" y="213" text-anchor="middle">画像</text>
+              <text class="d-note" x="180" y="262" text-anchor="middle">チェンジセット＝リポジトリの fork</text>
+              <text class="d-note d-note--accent" x="180" y="286" text-anchor="middle">上限：1 リポジトリ 1 GB、1 ファイル 32 MB</text>
+
+              <!-- 案 B -->
+              <text class="d-label" x="540" y="26" text-anchor="middle">案 B：役割で分ける</text>
+              <rect class="d-box" x="376" y="40" width="328" height="44" rx="4" />
+              <text class="d-label" x="392" y="67">Artifacts</text>
+              <text class="d-note" x="688" y="67" text-anchor="end">コード・スキーマ</text>
+              <rect class="d-box" x="376" y="96" width="328" height="44" rx="4" />
+              <text class="d-label" x="392" y="123">Durable Objects</text>
+              <text class="d-note" x="688" y="123" text-anchor="end">コンテンツの版</text>
+              <rect class="d-box" x="376" y="152" width="328" height="44" rx="4" />
+              <text class="d-label" x="392" y="179">D1</text>
+              <text class="d-note" x="688" y="179" text-anchor="end">検索の索引・サイトグラフ</text>
+              <rect class="d-box" x="376" y="208" width="328" height="44" rx="4" />
+              <text class="d-label" x="392" y="235">R2</text>
+              <text class="d-note" x="688" y="235" text-anchor="end">画像（内容のハッシュで参照）</text>
+              <text class="d-note" x="540" y="286" text-anchor="middle">チェンジセット＝fork ＋ マニフェストの差分</text>
+            </svg>
+          </div>
+        </figure>
+        <p>
+          案 A では、コード・スキーマ・コンテンツ・画像を 1 つの Artifacts リポジトリに置きます。チェンジセットはリポジトリの fork、公開は本流へのマージです。Git の仕組みがそのまま使えるので、作るものは最も少なく済みます。
+        </p>
+
+        <p>ただし、案 A には次の課題があります。</p>
+
+        <ul>
+          <li><strong>容量の上限</strong>：Artifacts は 1 リポジトリ 1 GB、1 ファイル 32 MB まで。画像を R2 に逃がしても、コンテンツの履歴はリポジトリの中で増え続ける</li>
+          <li><strong>検索</strong>：Git には索引がない。一覧や絞り込みのたびにリポジトリを読むか、別に索引を作ることになる。D1 に索引を持つなら、構成は案 B に近づく</li>
+          <li><strong>反映の速さ</strong>：コンテンツだけの変更でも、公開にはビルドとデプロイが要る。Workers Builds のビルドは 1 回 20 分まで</li>
+          <li><strong>権限の粒度</strong>：Artifacts のトークンは、リポジトリ単位で読み取りか書き込みかを分けるだけ。フィールド単位の権限は、SMA コアがファイルの差分を解釈して判定するしかない</li>
+        </ul>
+
+        <p>
+          目安として、ページ数が数百程度までで、更新が 1 日に数回までなら、案 A で始められます。それを超える場合、そして多くのサイトの運用では、<strong>案 B を推奨します</strong>。案 B では、Git が得意なコードとスキーマだけを Artifacts に置き、コンテンツは件数・検索・即時反映に強い仕組みに置きます。どちらを選んでも SMA コアから上は変わらないので、案 A で始めて案 B へ移ることもできます。
+        </p>
+
+        <p>以降は案 B を前提に書き、案 A と違う点だけを補います。</p>
+      </section>
+
+      <!-- ===== 3 ===== -->
+      <section class="p-section" id="content">
+        <h2><span class="p-secnum">3</span>コンテンツストア</h2>
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-d3">図 3　コンテンツストアのデータモデル。リビジョンは追記するだけで書き換えない。チェンジセットは、土台のマニフェストとの差分だけを持つ。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-d3">
+            <svg width="720" height="352" viewBox="0 0 720 352" role="img" aria-labelledby="cap-d3">
+              <defs>
+                <marker id="d3-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+
+              <rect class="d-group" x="16" y="16" width="400" height="320" rx="6" />
+              <text class="d-label" x="32" y="40">コレクションの DO（例：記事）</text>
+
+              <rect class="d-box" x="32" y="56" width="368" height="140" rx="4" />
+              <text class="d-label" x="48" y="80">リビジョン（追記のみ）</text>
+              <text class="d-text" x="48" y="106">r1　e1 の初版</text>
+              <text class="d-text" x="48" y="130">r2　e2 の初版</text>
+              <text class="d-text" x="48" y="154">r3　e1 の第 2 版（親は r1）</text>
+              <text class="d-text" x="48" y="178">r5　e1 の第 3 版（公開前）</text>
+
+              <rect class="d-box" x="32" y="212" width="368" height="108" rx="4" />
+              <text class="d-label" x="48" y="236">マニフェスト m3（凍結済み）</text>
+              <text class="d-text" x="48" y="262">e1 → r3</text>
+              <text class="d-text" x="48" y="286">e2 → r2</text>
+              <text class="d-note" x="48" y="310">本番のリリースが指す</text>
+
+              <!-- チェンジセット -->
+              <rect class="d-box d-accent" x="464" y="16" width="240" height="108" rx="4" />
+              <text class="d-label" x="480" y="40">チェンジセット DO</text>
+              <text class="d-note" x="480" y="64">土台：m3</text>
+              <text class="d-text" x="480" y="88">差分：e1 → r5</text>
+              <text class="d-note" x="480" y="110">それ以外は土台と同じ</text>
+              <polyline class="d-line d-line--dashed" points="464,84 440,84 440,173 400,173" marker-end="url(#d3-a)" />
+
+              <!-- 索引 -->
+              <rect class="d-box" x="464" y="168" width="240" height="56" rx="4" />
+              <text class="d-label" x="480" y="192">D1</text>
+              <text class="d-note" x="480" y="213">本流のマニフェストの索引</text>
+              <polyline class="d-line" points="400,266 452,266 452,196 464,196" marker-end="url(#d3-a)" />
+
+              <!-- メディア -->
+              <rect class="d-box" x="464" y="264" width="240" height="72" rx="4" />
+              <text class="d-label" x="480" y="288">R2</text>
+              <text class="d-note" x="480" y="309">画像：内容のハッシュがキー</text>
+              <text class="d-note" x="480" y="328">リビジョンはキーで参照</text>
+              <line class="d-line" x1="416" y1="316" x2="464" y2="316" marker-end="url(#d3-a)" />
+            </svg>
+          </div>
+        </figure>
+        <ul>
+          <li><strong>コレクションごとに 1 つの DO</strong>：記事・FAQ・お知らせといったコレクションごとに DO を分ける。SQLite を使う DO は 1 つあたり 10 GB まで保存できる。それを超えそうなコレクションは、さらにキーの範囲で分割する</li>
+          <li><strong>リビジョンは追記のみ</strong>：公開前のチェンジセットで作った版も、同じ DO にリビジョンとして書く。マニフェストは公開に使う時点で凍結し、ID で参照する</li>
+          <li><strong>チェンジセットは差分だけ</strong>：チェンジセットの DO が持つのは、土台のマニフェストの ID と、変えたエントリの対応だけ。分岐のコストは、変えたエントリの数にしか比例しない</li>
+          <li><strong>索引は D1</strong>：D1 には本流のマニフェストの索引を持つ。チェンジセットの中での検索は、D1 の結果にチェンジセットの差分を重ねて返す</li>
+          <li><strong>画像は R2</strong>：画像は内容のハッシュをキーにして R2 に置き、リビジョンからはキーで参照する。R2 の条件付き書き込みを使えば、同じキーの上書きを防げる</li>
+        </ul>
+
+        <p>
+          通常の巻き戻しは、後で述べるリリースの付け替えで行います。それとは別に、SQLite を使う DO には過去 30 日の任意の時点へ戻す機能（point-in-time recovery）があり、データそのものが壊れたときの最後の備えになります。
+        </p>
+      </section>
+
+      <!-- ===== 4 ===== -->
+      <section class="p-section" id="access">
+        <h2><span class="p-secnum">4</span>エージェントの接続と権限</h2>
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-d4">図 4　エージェントの接続。誰の指示かを確定してからチェンジセットを開き、対象を限った権限と、fork にだけ書ける短命のトークンを渡す。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-d4">
+            <svg width="720" height="360" viewBox="0 0 720 360" role="img" aria-labelledby="cap-d4">
+              <defs>
+                <marker id="d4-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+                <marker id="d4-b" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head--accent" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+
+              <!-- 登場する部品 -->
+              <rect class="d-box" x="16" y="16" width="132" height="44" rx="4" />
+              <text class="d-text" x="82" y="43" text-anchor="middle">エージェント</text>
+              <rect class="d-box" x="156" y="16" width="132" height="44" rx="4" />
+              <text class="d-text" x="222" y="43" text-anchor="middle">MCP Worker</text>
+              <rect class="d-box" x="296" y="16" width="132" height="44" rx="4" />
+              <text class="d-text" x="362" y="43" text-anchor="middle">Access</text>
+              <rect class="d-box" x="436" y="16" width="132" height="44" rx="4" />
+              <text class="d-text" x="502" y="35" text-anchor="middle">チェンジセット</text>
+              <text class="d-note" x="502" y="53" text-anchor="middle">DO</text>
+              <rect class="d-box" x="576" y="16" width="132" height="44" rx="4" />
+              <text class="d-text" x="642" y="43" text-anchor="middle">Artifacts</text>
+              <line class="d-line d-line--dashed" x1="82" y1="60" x2="82" y2="348" />
+              <line class="d-line d-line--dashed" x1="222" y1="60" x2="222" y2="348" />
+              <line class="d-line d-line--dashed" x1="362" y1="60" x2="362" y2="348" />
+              <line class="d-line d-line--dashed" x1="502" y1="60" x2="502" y2="348" />
+              <line class="d-line d-line--dashed" x1="642" y1="60" x2="642" y2="348" />
+
+              <!-- やりとり -->
+              <line class="d-line" x1="82" y1="88" x2="222" y2="88" marker-end="url(#d4-a)" />
+              <rect class="d-mask" x="134" y="65" width="37" height="20" />
+              <text class="d-note" x="152" y="80" text-anchor="middle">接続</text>
+              <line class="d-line" x1="222" y1="118" x2="362" y2="118" marker-end="url(#d4-a)" />
+              <rect class="d-mask" x="241" y="95" width="102" height="20" />
+              <text class="d-note" x="292" y="110" text-anchor="middle">OAuth で認可</text>
+              <line class="d-line d-line--dashed" x1="362" y1="148" x2="222" y2="148" marker-end="url(#d4-a)" />
+              <rect class="d-mask" x="252" y="125" width="80" height="20" />
+              <text class="d-note" x="292" y="140" text-anchor="middle">誰の指示か</text>
+              <line class="d-line" x1="82" y1="184" x2="222" y2="184" marker-end="url(#d4-a)" />
+              <rect class="d-mask" x="76" y="161" width="153" height="20" />
+              <text class="d-note" x="152" y="176" text-anchor="middle">チェンジセットを開く</text>
+              <line class="d-line" x1="222" y1="212" x2="502" y2="212" marker-end="url(#d4-a)" />
+              <rect class="d-mask" x="344" y="189" width="37" height="20" />
+              <text class="d-note" x="362" y="204" text-anchor="middle">作成</text>
+              <line class="d-line" x1="502" y1="240" x2="642" y2="240" marker-end="url(#d4-a)" />
+              <rect class="d-mask" x="496" y="217" width="152" height="20" />
+              <text class="d-note" x="572" y="232" text-anchor="middle">fork と短命トークン</text>
+              <line class="d-line d-line--dashed" x1="502" y1="270" x2="82" y2="270" marker-end="url(#d4-a)" />
+              <rect class="d-mask" x="180" y="247" width="224" height="20" />
+              <text class="d-note" x="292" y="262" text-anchor="middle">ケイパビリティと fork の URL</text>
+              <line class="d-line d-line--accent" x1="82" y1="306" x2="642" y2="306" marker-end="url(#d4-b)" />
+              <rect class="d-mask" x="245" y="283" width="234" height="20" />
+              <text class="d-note d-note--accent" x="362" y="298" text-anchor="middle">git push（fork にだけ書ける）</text>
+              <line class="d-line" x1="82" y1="338" x2="502" y2="338" marker-end="url(#d4-a)" />
+              <rect class="d-mask" x="162" y="315" width="260" height="20" />
+              <text class="d-note" x="292" y="330" text-anchor="middle">コンテンツを書く（MCP 経由で検査）</text>
+            </svg>
+          </div>
+        </figure>
+        <ul>
+          <li><strong>誰の指示かを最初に確定する</strong>：人間の認証は Access で行う。エージェントは MCP の OAuth で接続し、認可サーバーには Access を使う（workers-oauth-provider が Access との連携に対応している）。これで、すべての操作が特定の人間の指示に結びつく</li>
+          <li><strong>ケイパビリティはチェンジセットの DO が発行する</strong>：中身は、対象のチェンジセット・層・対象（コードならパス、コンテンツなら型とフィールド）・操作・期限。MCP のツールは、呼び出しのたびにチェンジセットの DO に可否を問い合わせる</li>
+          <li><strong>コードだけは git で直接書かせる</strong>：コーディングを得意とするエージェントは、git で作業するのがいちばん効率がよい。そこで、そのチェンジセットの fork にだけ書ける、期限つきのトークンを渡す。本流のリポジトリに書けるトークンは、SMA コアだけが持つ。fork は隔離された複製なので、Cloudflare OS の Gadget と同じく、その中では自由に変えてよい</li>
+          <li><strong>読んだものを記録する</strong>：エージェントが読んだエントリを、機密の区分とともにチェンジセットの DO に記録する。予約公開前のエントリを読んだチェンジセットでは、公開中のページへの書き込みを止める</li>
+        </ul>
+      </section>
+
+      <!-- ===== 5 ===== -->
+      <section class="p-section" id="lifecycle">
+        <h2><span class="p-secnum">5</span>チェンジセットの一生</h2>
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-d5">図 5　チェンジセットの状態遷移と、各段階を受け持つ部品。承認待ちのチェンジセットの上に、次のチェンジセットを積める。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-d5">
+            <svg width="720" height="244" viewBox="0 0 720 244" role="img" aria-labelledby="cap-d5">
+              <defs>
+                <marker id="d5-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+
+              <!-- 差し戻し -->
+              <path class="d-line" d="M185,76 V52 H69 V76" marker-end="url(#d5-a)" />
+              <text class="d-note" x="124" y="46" text-anchor="middle">検証に失敗</text>
+              <path class="d-line" d="M417,76 V28 H40 V76" marker-end="url(#d5-a)" />
+              <text class="d-note" x="227" y="22" text-anchor="middle">却下・作り直し</text>
+
+              <!-- 状態 -->
+              <rect class="d-box" x="16" y="76" width="106" height="52" rx="4" />
+              <text class="d-label" x="69" y="98" text-anchor="middle">作成</text>
+              <text class="d-note" x="69" y="118" text-anchor="middle">専用の DO</text>
+              <line class="d-line" x1="122" y1="102" x2="132" y2="102" marker-end="url(#d5-a)" />
+              <rect class="d-box" x="132" y="76" width="106" height="52" rx="4" />
+              <text class="d-label" x="185" y="98" text-anchor="middle">検証</text>
+              <text class="d-note" x="185" y="118" text-anchor="middle">Workflows</text>
+              <line class="d-line" x1="238" y1="102" x2="248" y2="102" marker-end="url(#d5-a)" />
+              <rect class="d-box" x="248" y="76" width="106" height="52" rx="4" />
+              <text class="d-label" x="301" y="98" text-anchor="middle">レビュー</text>
+              <text class="d-note" x="301" y="118" text-anchor="middle">Version URL</text>
+              <line class="d-line" x1="354" y1="102" x2="364" y2="102" marker-end="url(#d5-a)" />
+              <rect class="d-box d-accent" x="364" y="76" width="106" height="52" rx="4" />
+              <text class="d-label" x="417" y="98" text-anchor="middle">承認待ち</text>
+              <text class="d-note" x="417" y="118" text-anchor="middle">waitForEvent</text>
+              <line class="d-line" x1="470" y1="102" x2="480" y2="102" marker-end="url(#d5-a)" />
+              <rect class="d-box" x="480" y="76" width="106" height="52" rx="4" />
+              <text class="d-label" x="533" y="98" text-anchor="middle">公開</text>
+              <text class="d-note" x="533" y="118" text-anchor="middle">リリース DO</text>
+              <line class="d-line" x1="586" y1="102" x2="596" y2="102" marker-end="url(#d5-a)" />
+              <rect class="d-box" x="596" y="76" width="106" height="52" rx="4" />
+              <text class="d-label" x="649" y="98" text-anchor="middle">公開済み</text>
+              <text class="d-note" x="649" y="118" text-anchor="middle">監査ログ</text>
+
+              <!-- 積み重ね -->
+              <rect class="d-box" x="333" y="184" width="168" height="44" rx="4" />
+              <text class="d-text" x="417" y="211" text-anchor="middle">次のチェンジセット</text>
+              <line class="d-line d-line--dashed" x1="417" y1="184" x2="417" y2="128" marker-end="url(#d5-a)" />
+              <text class="d-note" x="429" y="162">土台にして上に積む</text>
+            </svg>
+          </div>
+        </figure>
+        <p>
+          チェンジセットを作ると、専用の DO と、コードとスキーマの fork ができます。エージェントがレビューに出すと、Workflows のインスタンスが起動し、検証・プレビューの用意・承認待ち・公開を順に進めます。各段階は Workflows のステップとして実行されるので、途中で失敗しても再試行され、どこまで進んだかが失われません。
+        </p>
+
+        <p>
+          承認待ちには、Workflows の <code>waitForEvent</code> を使います。外部からのイベントを待つ機能で、待てる期間は 1 秒から 365 日まで設定できます（既定は 24 時間）。管理画面で人間が承認すると、そのインスタンスにイベントが送られ、公開へ進みます。複数のチェンジセットをまとめて承認するのは、複数のインスタンスにイベントを送ることにあたります。待機中のインスタンスは同時実行数の上限に数えられないので、承認待ちが溜まっても実行枠を圧迫しません。期限が切れたら、差し戻しとして扱います。
+        </p>
+
+        <p>
+          承認を待つ間も、エージェントは次のチェンジセットを、承認待ちのチェンジセットを土台にして作れます。土台が却下されたら、その上に積んだチェンジセットも作り直しの対象になります。
+        </p>
+
+        <p>
+          状態の遷移は、すべて監査ログとして R2 に追記します。R2 のバケットロックを使えば、決めた期間は記録を削除も上書きもできなくなります。なお、Workers Analytics Engine は書き込みと照会の両方でサンプリングされ、個々の記録を必ず取り出せるとは限らないため、監査ログには向きません。
+        </p>
+      </section>
+
+      <!-- ===== 6 ===== -->
+      <section class="p-section" id="preview">
+        <h2><span class="p-secnum">6</span>検証とプレビュー</h2>
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-d6">図 6　検証とプレビュー。本番にはデプロイせずに版だけを登録し、チェンジセット専用の Version URL で、候補のコードと候補のコンテンツを合わせて表示する。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-d6">
+            <svg width="720" height="236" viewBox="0 0 720 236" role="img" aria-labelledby="cap-d6">
+              <defs>
+                <marker id="d6-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+
+              <rect class="d-box" x="16" y="40" width="124" height="48" rx="4" />
+              <text class="d-text" x="78" y="60" text-anchor="middle">fork</text>
+              <text class="d-note" x="78" y="79" text-anchor="middle">コードとスキーマ</text>
+              <line class="d-line" x1="140" y1="64" x2="156" y2="64" marker-end="url(#d6-a)" />
+              <rect class="d-box" x="156" y="40" width="124" height="48" rx="4" />
+              <text class="d-text" x="218" y="60" text-anchor="middle">Workers Builds</text>
+              <text class="d-note" x="218" y="79" text-anchor="middle">ビルド</text>
+              <line class="d-line" x1="280" y1="64" x2="296" y2="64" marker-end="url(#d6-a)" />
+              <rect class="d-box" x="296" y="40" width="124" height="48" rx="4" />
+              <text class="d-text" x="358" y="60" text-anchor="middle">Sandbox</text>
+              <text class="d-note" x="358" y="79" text-anchor="middle">検証</text>
+              <line class="d-line" x1="420" y1="64" x2="436" y2="64" marker-end="url(#d6-a)" />
+              <rect class="d-box" x="436" y="40" width="124" height="48" rx="4" />
+              <text class="d-text" x="498" y="60" text-anchor="middle">版を登録</text>
+              <text class="d-note" x="498" y="79" text-anchor="middle">デプロイせず</text>
+              <line class="d-line" x1="560" y1="64" x2="576" y2="64" marker-end="url(#d6-a)" />
+              <rect class="d-box d-accent" x="576" y="40" width="128" height="48" rx="4" />
+              <text class="d-text" x="640" y="60" text-anchor="middle">Version URL</text>
+              <text class="d-note" x="640" y="79" text-anchor="middle">専用の別名</text>
+
+              <line class="d-line" x1="640" y1="88" x2="640" y2="168" marker-end="url(#d6-a)" />
+              <text class="d-note" x="630" y="124" text-anchor="end">レビュアーが開く</text>
+              <text class="d-note" x="630" y="144" text-anchor="end">（Access で保護）</text>
+
+              <rect class="d-box" x="576" y="168" width="128" height="48" rx="4" />
+              <text class="d-text" x="640" y="188" text-anchor="middle">フロントエンド</text>
+              <text class="d-note" x="640" y="207" text-anchor="middle">候補のコード</text>
+              <line class="d-line" x1="576" y1="192" x2="560" y2="192" marker-end="url(#d6-a)" />
+              <rect class="d-box" x="436" y="168" width="124" height="48" rx="4" />
+              <text class="d-text" x="498" y="188" text-anchor="middle">コンテンツ API</text>
+              <text class="d-note" x="498" y="207" text-anchor="middle">service binding</text>
+              <line class="d-line" x1="436" y1="192" x2="420" y2="192" marker-end="url(#d6-a)" />
+              <rect class="d-box" x="266" y="168" width="154" height="48" rx="4" />
+              <text class="d-text" x="343" y="188" text-anchor="middle">チェンジセット DO</text>
+              <text class="d-note" x="343" y="207" text-anchor="middle">候補のマニフェスト</text>
+
+              <text class="d-note d-note--accent" x="16" y="188">フロントエンドの Worker は</text>
+              <text class="d-note d-note--accent" x="16" y="208">DO を直接バインドしない</text>
+            </svg>
+          </div>
+        </figure>
+        <ul>
+          <li><strong>ビルドと検証</strong>：Workers Builds が fork のコードをビルドする（Artifacts との連携に対応している）。検証は Sandbox で行う。コンテンツがスキーマに合っているか、コンポーネントが存在するフィールドだけを読んでいるか、リンク切れやアクセシビリティの問題がないかを調べ、サイトグラフも計算し直す</li>
+          <li><strong>版を登録するだけで、デプロイはしない</strong>：Workers には、本番に出さずに新しい版だけを登録する仕組みがある。登録した版にはチェンジセット専用の別名をつけ、その別名の Version URL をプレビューに使う。Version URL は既定で誰でも開けるので、Access で保護する</li>
+          <li><strong>候補のコンテンツを解決する</strong>：フロントエンドは、開かれたホスト名（別名）をコンテンツ API に伝える。コンテンツ API はそこからチェンジセットを特定し、土台のマニフェストに差分を重ねた候補のコンテンツを返す</li>
+        </ul>
+
+        <p>
+          ここに 1 つ、構成を左右する制約があります。Version URL は、Durable Objects を使う Worker では使えません。そのため、フロントエンドの Worker には DO を直接バインドせず、コンテンツは service binding でつないだコンテンツ API の Worker から取ります。この分離は、後で述べるロールバックの制約を避けるうえでも役に立ちます。
+        </p>
+
+        <p>
+          静的生成の場合は、候補のマニフェストでビルドした静的アセットを含む版を登録し、同じく Version URL で確認します。
+        </p>
+      </section>
+
+      <!-- ===== 7 ===== -->
+      <section class="p-section" id="publish">
+        <h2><span class="p-secnum">7</span>公開</h2>
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-d7">図 7　公開の順序（リクエストごとに描画する場合）。一度に 1 つの層だけを進めるので、どの段階の後でも、本番は互いに整合した版の組を指している。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-d7">
+            <svg width="720" height="240" viewBox="0 0 720 240" role="img" aria-labelledby="cap-d7">
+              <!-- 段階の見出し -->
+              <text class="d-note" x="200" y="32" text-anchor="middle">現在</text>
+              <text class="d-label" x="290" y="32" text-anchor="middle">1 拡張</text>
+              <text class="d-label" x="380" y="32" text-anchor="middle">2 移行</text>
+              <text class="d-label" x="470" y="32" text-anchor="middle">3 コード</text>
+              <text class="d-label" x="560" y="32" text-anchor="middle">4 公開</text>
+              <text class="d-label" x="650" y="32" text-anchor="middle">5 縮小</text>
+
+              <!-- スキーマ -->
+              <text class="d-label" x="16" y="70">スキーマ</text>
+              <text class="d-note" x="16" y="88">Artifacts</text>
+              <line class="d-line" x1="238" y1="74" x2="704" y2="74" />
+              <rect class="d-box" x="162" y="56" width="76" height="36" rx="4" />
+              <text class="d-text" x="200" y="79" text-anchor="middle">s1</text>
+              <rect class="d-box d-accent" x="252" y="56" width="76" height="36" rx="4" />
+              <text class="d-text" x="290" y="79" text-anchor="middle">s2</text>
+              <rect class="d-box d-accent" x="612" y="56" width="76" height="36" rx="4" />
+              <text class="d-text" x="650" y="79" text-anchor="middle">s3</text>
+
+              <!-- コンテンツ -->
+              <text class="d-label" x="16" y="134">コンテンツ</text>
+              <text class="d-note" x="16" y="152">リリース DO</text>
+              <line class="d-line" x1="238" y1="138" x2="704" y2="138" />
+              <rect class="d-box" x="162" y="120" width="76" height="36" rx="4" />
+              <text class="d-text" x="200" y="143" text-anchor="middle">R1</text>
+              <rect class="d-box d-accent" x="342" y="120" width="76" height="36" rx="4" />
+              <text class="d-text" x="380" y="143" text-anchor="middle">R2</text>
+              <rect class="d-box d-accent" x="522" y="120" width="76" height="36" rx="4" />
+              <text class="d-text" x="560" y="143" text-anchor="middle">R3</text>
+
+              <!-- コード -->
+              <text class="d-label" x="16" y="198">コード</text>
+              <text class="d-note" x="16" y="216">Workers</text>
+              <line class="d-line" x1="238" y1="202" x2="704" y2="202" />
+              <rect class="d-box" x="162" y="184" width="76" height="36" rx="4" />
+              <text class="d-text" x="200" y="207" text-anchor="middle">v1</text>
+              <rect class="d-box d-accent" x="432" y="184" width="76" height="36" rx="4" />
+              <text class="d-text" x="470" y="207" text-anchor="middle">v2</text>
+            </svg>
+          </div>
+        </figure>
+        <p>承認されたチェンジセットは、Workflows の手順として次の順に公開します。</p>
+
+        <ol>
+          <li><strong>スキーマを拡張する</strong>：fork のスキーマの変更のうち、追加の部分だけを本流にマージする（s2）</li>
+          <li><strong>コンテンツを移行する</strong>：コレクションの DO に移行後のリビジョンを書き、マニフェストを凍結して、リリース DO を付け替える（R2）</li>
+          <li><strong>コードをデプロイする</strong>：新しいコードの版をデプロイする（v2）。新旧どちらのコードも R2 の上で動くことは、1 と 2 で保証されている。そのため、段階的デプロイで新しい版への割合を少しずつ上げてもよい</li>
+          <li><strong>新しいコンテンツを公開する</strong>：チェンジセットのエントリを含むマニフェストを凍結し、付け替える（R3）</li>
+          <li><strong>スキーマを縮小する</strong>：どこからも参照されていないことを D1 のサイトグラフで確かめてから、古いフィールドを本流から削除する（s3）</li>
+        </ol>
+
+        <p>
+          途中の段階で失敗したら、それまでの段階を逆順に戻します。リリース DO は、リリースごとにコードの版・スキーマのコミット・マニフェストの組を記録しておき、どのリリースにも確実に戻れるようにします。
+        </p>
+
+        <p>
+          Workers のロールバックには制約があります。戻せるのは直近 100 版までで、間に Durable Object のクラス構成の変更などが挟まると戻せません。フロントエンドの Worker に DO を持たせない構成は、この制約を受けにくくするためでもあります。
+        </p>
+      </section>
+
+      <!-- ===== 8 ===== -->
+      <section class="p-section" id="delivery">
+        <h2><span class="p-secnum">8</span>配信：2 つの方式</h2>
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-d8">図 8　配信の 2 つの方式。どちらもリリースという考え方は同じで、本番のポインタを置く場所だけが違う。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-d8">
+            <svg width="720" height="340" viewBox="0 0 720 340" role="img" aria-labelledby="cap-d8">
+              <defs>
+                <marker id="d8-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+
+              <!-- リクエストごとに描画 -->
+              <text class="d-label" x="180" y="26" text-anchor="middle">リクエストごとに描画</text>
+              <rect class="d-box" x="96" y="40" width="168" height="36" rx="4" />
+              <text class="d-text" x="180" y="63" text-anchor="middle">閲覧者</text>
+              <line class="d-line" x1="180" y1="76" x2="180" y2="104" marker-end="url(#d8-a)" />
+              <rect class="d-box" x="96" y="104" width="168" height="40" rx="4" />
+              <text class="d-text" x="180" y="129" text-anchor="middle">フロントエンド Worker</text>
+              <line class="d-line" x1="150" y1="144" x2="92" y2="200" marker-end="url(#d8-a)" />
+              <text class="d-note" x="100" y="168" text-anchor="end">① 現在の版</text>
+              <line class="d-line" x1="210" y1="144" x2="268" y2="200" marker-end="url(#d8-a)" />
+              <text class="d-note" x="256" y="168">② 中身</text>
+              <rect class="d-box d-accent" x="16" y="200" width="152" height="48" rx="4" />
+              <text class="d-text" x="92" y="220" text-anchor="middle">リリース DO</text>
+              <text class="d-note d-note--accent" x="92" y="239" text-anchor="middle">本番のポインタ</text>
+              <rect class="d-box" x="192" y="200" width="152" height="48" rx="4" />
+              <text class="d-text" x="268" y="220" text-anchor="middle">コンテンツ API</text>
+              <text class="d-note" x="268" y="239" text-anchor="middle">版を指定して取得</text>
+              <text class="d-note" x="92" y="272" text-anchor="middle">数秒だけキャッシュ</text>
+              <text class="d-note" x="268" y="272" text-anchor="middle">キャッシュキーに版</text>
+
+              <!-- 静的生成 -->
+              <text class="d-label" x="540" y="26" text-anchor="middle">静的生成</text>
+              <rect class="d-box" x="456" y="40" width="168" height="36" rx="4" />
+              <text class="d-text" x="540" y="63" text-anchor="middle">閲覧者</text>
+              <line class="d-line" x1="540" y1="76" x2="540" y2="104" marker-end="url(#d8-a)" />
+              <rect class="d-box" x="456" y="104" width="168" height="40" rx="4" />
+              <text class="d-text" x="540" y="129" text-anchor="middle">静的アセット</text>
+              <line class="d-line" x1="540" y1="200" x2="540" y2="144" marker-end="url(#d8-a)" />
+              <text class="d-note" x="552" y="178">配信する版を決める</text>
+              <rect class="d-box d-accent" x="456" y="200" width="168" height="48" rx="4" />
+              <text class="d-text" x="540" y="220" text-anchor="middle">Workers のデプロイ</text>
+              <text class="d-note d-note--accent" x="540" y="239" text-anchor="middle">本番のポインタ</text>
+              <line class="d-line" x1="540" y1="288" x2="540" y2="248" marker-end="url(#d8-a)" />
+              <text class="d-note" x="552" y="273">版を登録</text>
+              <rect class="d-box" x="456" y="288" width="168" height="40" rx="4" />
+              <text class="d-text" x="540" y="313" text-anchor="middle">リリースごとにビルド</text>
+            </svg>
+          </div>
+        </figure>
+        <h3>リクエストごとに描画する場合</h3>
+
+        <p>
+          フロントエンドの Worker は、まずリリース DO に現在のリリースを問い合わせ、次にそのリリースを指定してコンテンツ API から中身を取ります。リリースが指すマニフェストは凍結されていて中身が変わらないので、キャッシュのキーにリリースの ID を含めれば、キャッシュを消す必要がそもそもなくなります。Workers の Cache API はデータセンターごとに独立していて、削除もそのデータセンターにしか効きません。しかし、キーが変わらない中身だけを指すなら、この性質は問題になりません。
+        </p>
+
+        <p>
+          リクエストのたびに、全体で 1 つのリリース DO へ問い合わせるのは負荷が集中します。そこで、現在のリリースの ID は、各データセンターで数秒だけキャッシュします。その代わり、公開が反映されるまでに数秒の遅れが出ます。
+        </p>
+
+        <h3>静的生成の場合</h3>
+
+        <p>
+          静的生成では、Workers のデプロイそのものが本番のポインタになります。公開のたびに、凍結したマニフェストでビルドし、静的アセットを含む版を登録してデプロイします。巻き戻しは Workers のロールバックで行います。ただし、コンテンツの公開が多いと、直近 100 版というロールバックの範囲をすぐに使い切ります。リリース DO にコードのコミットとマニフェストの組を残しておけば、範囲を過ぎた古いリリースも、ビルドし直して戻せます。
+        </p>
+
+        <figure class="p-figure is-wide">
+          <figcaption class="p-table__caption" id="cap-delivery">配信の 2 つの方式の比較。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-table-wrap" tabindex="0" role="region" aria-labelledby="cap-delivery">
+            <table class="p-table" aria-labelledby="cap-delivery">
+              <thead>
+                <tr>
+                  <th scope="col">観点</th>
+                  <th scope="col">リクエストごとに描画</th>
+                  <th scope="col">静的生成</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">本番のポインタ</th><td>リリース DO</td><td>Workers のデプロイ</td></tr>
+                <tr><th scope="row">コンテンツだけの公開</th><td>付け替えるだけ。数秒で反映</td><td>ビルドとデプロイが要る（ビルドは 1 回 20 分まで）</td></tr>
+                <tr><th scope="row">巻き戻し</th><td>付け替えるだけ</td><td>Workers のロールバック（直近 100 版）か、ビルドし直し</td></tr>
+                <tr><th scope="row">配信時の依存</th><td>コンテンツ API とリリース DO</td><td>なし（静的ファイルだけ）</td></tr>
+                <tr><th scope="row">向くサイト</th><td>更新が多いサイト</td><td>更新が少なく、配信を単純にしたいサイト</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </figure>
+
+        <p>
+          どちらの方式でも、リリースという考え方と、公開・巻き戻しの手順は変わりません。違うのは、本番のポインタをリリース DO に置くか、Workers のデプロイに置くかだけです。
+        </p>
+      </section>
+
+      <!-- ===== 9 ===== -->
+      <section class="p-section" id="concurrency">
+        <h2><span class="p-secnum">9</span>並行制御</h2>
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-d9">図 9　並行制御。公開はリリース DO が 1 件ずつ受け付け、サイトグラフで意味上の競合を調べる。競合したチェンジセットは作り直しを求められる。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-d9">
+            <svg width="720" height="292" viewBox="0 0 720 292" role="img" aria-labelledby="cap-d9">
+              <defs>
+                <marker id="d9-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+                <marker id="d9-b" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head--accent" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+
+              <rect class="d-box" x="16" y="40" width="180" height="48" rx="4" />
+              <text class="d-text" x="106" y="60" text-anchor="middle">チェンジセット A</text>
+              <text class="d-note" x="106" y="79" text-anchor="middle">原文の見出しを変更</text>
+              <text class="d-note" x="106" y="110" text-anchor="middle">A は先に公開済み</text>
+              <rect class="d-box" x="16" y="120" width="180" height="48" rx="4" />
+              <text class="d-text" x="106" y="140" text-anchor="middle">チェンジセット B</text>
+              <text class="d-note" x="106" y="159" text-anchor="middle">同じ見出しを翻訳</text>
+
+              <polyline class="d-line" points="196,64 226,64 226,96 256,96" marker-end="url(#d9-a)" />
+              <polyline class="d-line" points="196,136 226,136 226,112 256,112" marker-end="url(#d9-a)" />
+
+              <rect class="d-box d-accent" x="256" y="72" width="180" height="64" rx="4" />
+              <text class="d-text" x="346" y="98" text-anchor="middle">リリース DO</text>
+              <text class="d-note" x="346" y="119" text-anchor="middle">1 件ずつ受け付ける</text>
+              <line class="d-line" x1="436" y1="104" x2="496" y2="104" marker-end="url(#d9-a)" />
+
+              <rect class="d-box" x="496" y="72" width="208" height="64" rx="4" />
+              <text class="d-text" x="600" y="98" text-anchor="middle">競合の検出</text>
+              <text class="d-note" x="600" y="119" text-anchor="middle">変更の重なりと依存</text>
+
+              <path class="d-line d-line--accent" d="M520,136 V184 H106 V168" marker-end="url(#d9-b)" />
+              <text class="d-note d-note--accent" x="312" y="176" text-anchor="middle">競合：新しい本流の上で作り直す</text>
+
+              <!-- サイトグラフ -->
+              <line class="d-line d-line--dashed" x1="592" y1="136" x2="592" y2="232" marker-end="url(#d9-a)" />
+              <text class="d-note" x="604" y="200">D1 に照会</text>
+              <rect class="d-box" x="460" y="220" width="112" height="36" rx="4" />
+              <text class="d-text" x="516" y="243" text-anchor="middle">原文の見出し</text>
+              <line class="d-line" x1="572" y1="238" x2="612" y2="238" />
+              <rect class="d-box" x="612" y="220" width="92" height="36" rx="4" />
+              <text class="d-text" x="658" y="243" text-anchor="middle">英訳</text>
+              <text class="d-note" x="516" y="278" text-anchor="middle">A が変更</text>
+              <text class="d-note" x="658" y="278" text-anchor="middle">B が変更</text>
+              <text class="d-note" x="440" y="243" text-anchor="end">翻訳の関係で結ばれている</text>
+            </svg>
+          </div>
+        </figure>
+        <p>
+          公開の受け付けは、リリース DO が 1 件ずつ直列に処理します。DO の単一スレッドの性質により、リリース DO はそのままマージの順番待ちの列として働きます。
+        </p>
+
+        <p>自分の番が来たチェンジセットは、次の順に調べられます。</p>
+
+        <ol>
+          <li><strong>コード</strong>：fork を、現在の本流に 3-way でマージできるかを Sandbox で確かめる</li>
+          <li><strong>コンテンツ</strong>：チェンジセットの差分を、現在の本流のマニフェストとエントリ単位で比べる</li>
+          <li><strong>意味上の競合</strong>：このチェンジセットが変えた要素と、土台の時点より後に公開された変更とが、D1 のサイトグラフ上で依存関係によって結ばれていないかを照会する</li>
+        </ol>
+
+        <p>
+          競合が見つかったら、エージェントに、新しい本流の上でチェンジセットを作り直すよう求めます。本編で述べたとおり、エージェントにとって作り直しは安い作業なので、複雑な自動マージには頼りません。
+        </p>
+      </section>
+
+      <!-- ===== 10 ===== -->
+      <section class="p-section" id="open">
+        <h2><span class="p-secnum">10</span>残る課題</h2>
+
+        <ul>
+          <li><strong>サービスの成熟度</strong>：Artifacts は 2026 年 10 月 1 日にオープンベータになったばかりで、Workers の有料プランが前提になる。D1 のリードレプリカや Dynamic Workers もベータ版。本番で採用する前に、最新の状態を確かめる必要がある</li>
+          <li><strong>リリース DO への集中</strong>：全体で 1 つの DO に、公開と現在の版の問い合わせが集まる。数秒のキャッシュで足りない規模では、読み取りを分散する仕組みが要る</li>
+          <li><strong>コレクションの分割</strong>：10 GB を超えるコレクションをどう分割し、分割をまたぐ参照をどう扱うかは、まだ設計していない</li>
+          <li><strong>人間の同時編集</strong>：同じチェンジセットを複数の編集者がリアルタイムに編集する仕組みは、ここでは扱っていない</li>
+          <li><strong>候補のコードを隔離して動かす別の方法</strong>：Version URL の代わりに、Cloudflare OS の Gadget と同じく Dynamic Workers で候補のコードを隔離して動かせば、DO を使えないという制約や、別名の数（直近 1,000 件まで）から離れられる可能性がある。ただし、まだ検証していない</li>
+        </ul>
+      </section>
+
+      <!-- ===== 参考 ===== -->
+      <section class="p-section" id="references">
+        <h2>参考</h2>
+        <ul class="p-refs">
+          <li><a href="https://developers.cloudflare.com/durable-objects/concepts/what-are-durable-objects/">What are Durable Objects?</a></li>
+          <li><a href="https://developers.cloudflare.com/durable-objects/platform/limits/">Durable Objects: Limits</a></li>
+          <li><a href="https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/">Durable Objects: SQLite storage API</a></li>
+          <li><a href="https://developers.cloudflare.com/d1/platform/limits/">D1: Limits</a></li>
+          <li><a href="https://developers.cloudflare.com/r2/api/workers/workers-api-reference/">R2: Workers API reference</a></li>
+          <li><a href="https://developers.cloudflare.com/r2/buckets/bucket-locks/">R2: Bucket locks</a></li>
+          <li><a href="https://developers.cloudflare.com/workflows/build/events-and-parameters/">Workflows: Events and parameters</a></li>
+          <li><a href="https://developers.cloudflare.com/workflows/reference/limits/">Workflows: Limits</a></li>
+          <li><a href="https://developers.cloudflare.com/workers/configuration/versions-and-deployments/">Workers: Versions and deployments</a></li>
+          <li><a href="https://developers.cloudflare.com/workers/configuration/versions-and-deployments/rollbacks/">Workers: Rollbacks</a></li>
+          <li><a href="https://developers.cloudflare.com/workers/configuration/previews/">Workers: Preview URLs（Version URLs）</a></li>
+          <li><a href="https://developers.cloudflare.com/agents/model-context-protocol/apis/handler-api/">Agents: createMcpHandler</a></li>
+          <li><a href="https://developers.cloudflare.com/agents/model-context-protocol/mcp-agent-api/">Agents: McpAgent</a></li>
+          <li><a href="https://developers.cloudflare.com/agents/model-context-protocol/authorization/">Agents: MCP authorization</a></li>
+          <li><a href="https://developers.cloudflare.com/artifacts/platform/limits/">Artifacts: Limits</a></li>
+          <li><a href="https://developers.cloudflare.com/changelog/post/2026-10-01-artifacts-open-beta/">Artifacts open beta（Changelog, 2026-10-01）</a></li>
+          <li><a href="https://developers.cloudflare.com/workers/ci-cd/builds/limits-and-pricing/">Workers Builds: Limits and pricing</a></li>
+          <li><a href="https://developers.cloudflare.com/sandbox/">Sandbox SDK</a></li>
+          <li><a href="https://developers.cloudflare.com/workers/runtime-apis/cache/">Workers: Cache API</a></li>
+          <li><a href="https://developers.cloudflare.com/analytics/analytics-engine/sampling/">Workers Analytics Engine: Sampling</a></li>
+          <li><a href="https://developers.cloudflare.com/dynamic-workers/">Dynamic Workers</a></li>
+          <li><a href="https://blog.cloudflare.com/cloudflare-os/">Cloudflare OS（Cloudflare Blog, 2026-08-05）</a></li>
+        </ul>
+      </section>
+
+      <a class="p-next" href="/sma-concept/" aria-labelledby="next-concept">
+        <p class="p-next__label">前のページ</p>
+        <p class="p-next__title" id="next-concept">SMA 構想 — AI 時代の CMS は、サイトを管理するエージェントになる</p>
+        <p class="p-next__desc">ヘッドレス CMS の前提と課題を振り返り、コード・構造・コンテンツを等しく扱う CMS を提言した本編です。</p>
+      </a>
+
+    </div>
+  </div>
+</main>
+
+<footer class="l-footer">
+  <div class="l-container">
+    <p>mutexn</p>
+  </div>
+</footer>
+
+</body>
+</html>

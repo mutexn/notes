@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SMA 構想 — AI 時代の CMS は、サイトを管理するエージェントになる</title>
+<meta name="description" content="ヘッドレス CMS が解決したことと、その前提を振り返る。AI エージェントが運用を担う時代に向けて、サイトのコード・CMS の構造・コンテンツを等しく扱う CMS を提言する。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  /* =======================================================================
+     デジタル庁デザインシステム（DADS）準拠
+     カラー値の出典: @digital-go-jp/design-tokens v2.0.1
+     トークンと l- / p- の命名は app/index.html と app/physics/ に揃える
+     ======================================================================= */
+  :root {
+    --white: #ffffff;
+    --gray-50: #f2f2f2;
+    --gray-420: #949494;   /* 対白 3.03:1  非テキスト下限 */
+    --gray-536: #767676;   /* 対白 4.54:1  テキスト下限 */
+    --gray-800: #333333;   /* 対白 12.63:1 */
+    --gray-900: #1a1a1a;   /* 対白 17.40:1 */
+    --black: #000000;
+    --link: #0017c1;           /* blue-900     対白 11.10:1 */
+    --link-visited: #8b008b;   /* magenta-900  対白  8.50:1 */
+    --link-active: #ac3e00;    /* orange-900   対白  6.10:1 */
+    --focus-yellow: #ffd43d;   /* yellow-300   フォーカス（変更禁止） */
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--white);
+    color: var(--gray-900);
+    /* Std-17N-170 */
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 17px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    /* 文節を単位に折る */
+    word-break: auto-phrase;
+    /* 小書き仮名・長音符を行頭に置かない */
+    line-break: strict;
+    /* 最終行に 1〜2 文字だけ残る折り返しを避ける */
+    text-wrap: pretty;
+  }
+
+  h1, h2, h3 { text-wrap: balance; }
+
+  /* ----- フォーカスインジケーター: Yellow-300 と Black の2重構造 ----- */
+  a:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 2px;
+    background-color: var(--focus-yellow);
+    color: var(--gray-900);
+    box-shadow: 0 0 0 2px var(--focus-yellow);
+    text-decoration-color: var(--gray-900);
+  }
+
+  /* ----- レイアウト ----- */
+  .l-container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .l-main { padding: 24px 0 80px; }
+
+  /* ----- パンくず ----- */
+  .l-breadcrumb {
+    padding: 24px 0 0;
+    /* Std-16N-170 */
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-breadcrumb ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 8px;
+  }
+  .l-breadcrumb li { display: flex; align-items: center; gap: 8px; }
+  .l-breadcrumb li + li::before { content: '\203A'; color: var(--gray-536); }
+
+  /* ----- 本文カラム: 読み物は幅を絞る ----- */
+  .p-prose { max-width: 720px; }
+
+  /* Std-45B-140 */
+  h1 {
+    font-size: 45px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0;
+    margin: 0 0 8px;
+  }
+  /* Std-24N-150 */
+  .p-subtitle {
+    margin: 0 0 1em;
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+
+  .p-prose p { margin: 0 0 1.2em; }
+  .p-prose ul, .p-prose ol { margin: 0 0 1.2em; padding-left: 1.6em; }
+  .p-prose li { margin-bottom: 0.5em; }
+
+  /* Std-32B-150 */
+  .p-prose h2 {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    margin: 0 0 0.6em;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gray-420);
+  }
+  /* 章番号。見出しの上に小さく置く: Std-16N-170 */
+  .p-prose h2 .p-secnum {
+    display: block;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-536);
+  }
+  /* Std-24B-150 */
+  .p-prose h3 {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    margin: 1.6em 0 0.5em;
+  }
+
+  .p-section { margin-top: 64px; }
+
+  /* キャッチコピー: Std-20N-150 */
+  .p-catch {
+    margin: 0 0 1.2em;
+    font-size: 20px;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+
+  /* ----- 本文中のリンク: 色以外にも下線で示す ----- */
+  .p-prose a, .l-breadcrumb a {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  .p-prose a:visited, .l-breadcrumb a:visited { color: var(--link-visited); }
+  .p-prose a:hover, .l-breadcrumb a:hover { text-decoration-thickness: 3px; }
+  .p-prose a:active, .l-breadcrumb a:active { color: var(--link-active); }
+
+  /* ----- ページ内目次 ----- */
+  .p-toc {
+    margin: 0 0 8px;
+    padding: 20px 24px;
+    background: var(--white);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+  }
+  .p-toc__title {
+    margin: 0 0 8px;
+    /* Std-16B-170 */
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+  .p-prose .p-toc ol {
+    margin: 0;
+    padding-left: 1.4em;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .p-prose .p-toc li { margin-bottom: 0.25em; }
+  .p-prose .p-toc li:last-child { margin-bottom: 0; }
+
+  /* ----- 補足ブロック -----
+     DADS の注釈ブロックは補足情報用で、文脈の切り替えには使わない規定のため独自に組む。
+     境界は影ではなく罫線で示す（--gray-420 は対白 3:1 以上） */
+  .p-aside {
+    margin: 2em 0;
+    padding: 20px 24px;
+    background: var(--gray-50);
+    border-left: 4px solid var(--gray-420);
+  }
+  /* Std-18B-160 */
+  .p-aside__title {
+    margin: 0 0 0.5em;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+  }
+  .p-prose .p-aside p { margin: 0 0 1em; }
+  .p-prose .p-aside p:last-child { margin-bottom: 0; }
+
+  /* ----- 対比表 -----
+     DADS の高密度用途は行高 130% だが、和文の可読性を優先して 1.4 を下限とする */
+  /* 横スクロールする領域はキーボードでも操作できるよう tabindex="0" と role="region" を付ける */
+  .p-table-wrap { margin: 0; overflow-x: auto; }
+  .p-table-wrap:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    box-shadow: 0 0 0 4px var(--focus-yellow);
+  }
+  .p-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+  /* 見出しセルの背景が gray-50 のため、罫線は gray-536（対 gray-50 4.06:1）を使う */
+  .p-table th, .p-table td {
+    padding: 12px;
+    border: 1px solid var(--gray-536);
+    text-align: left;
+    vertical-align: top;
+  }
+  .p-figure { margin: 1.5em 0; }
+  /* Std-16N-170 */
+  .p-table__caption {
+    margin: 0 0 8px;
+    font-size: 16px;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-536);
+    text-align: left;
+  }
+  /* 横スクロールの手がかり。スクロールが起きる幅でだけ出す */
+  .p-table__hint { display: none; }
+  .p-table thead th {
+    background: var(--gray-50);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .p-table tbody th {
+    background: var(--gray-50);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* ----- 図（インライン SVG）-----
+     SVG は viewBox の幅で原寸表示する。縮小すると図中の文字が 14px を下回るため、
+     狭い画面では表と同じく横スクロールに切り替える（tabindex="0" と role="region" を付ける） */
+  .p-diagram { margin: 1.5em 0; }
+  .p-diagram__scroll { overflow-x: auto; }
+  .p-diagram__scroll:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    box-shadow: 0 0 0 4px var(--focus-yellow);
+  }
+  .p-diagram svg { display: block; max-width: none; }
+
+  /* 図の部品。罫線は gray-900、まとまりの枠は gray-536（対白 4.54:1、対 gray-50 4.06:1） */
+  .d-box { fill: var(--white); stroke: var(--gray-900); stroke-width: 1.5; }
+  .d-group { fill: var(--gray-50); stroke: var(--gray-536); stroke-width: 1; }
+  /* 論点になる要素だけ blue-900 で強調する */
+  .d-accent { stroke: var(--link); stroke-width: 2; }
+  .d-line { fill: none; stroke: var(--gray-900); stroke-width: 1.5; }
+  .d-line--accent { stroke: var(--link); stroke-width: 2; }
+  .d-line--dashed { stroke-dasharray: 6 4; }
+  .d-head { fill: var(--gray-900); }
+  .d-head--accent { fill: var(--link); }
+  /* 図中の文字は 14px 以上 */
+  .d-label { fill: var(--gray-900); font-size: 15px; font-weight: 700; }
+  .d-text { fill: var(--gray-900); font-size: 14px; }
+  .d-note { fill: var(--gray-800); font-size: 14px; }
+  .d-note--accent { fill: var(--link); font-weight: 700; }
+
+  /* .p-prose a の下線・色は本文中のテキストリンク用。
+     ブロック全体を包むリンクには効かせない（下線はタイトルだけに付ける） */
+  .p-prose a.p-next {
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+
+  /* ----- 次章への導線 -----
+     DADS: コンテナ自体をクリッカブルエリア（フォーカス可能エリア）にできる。
+     その場合、コンテナ内に別のリンクを置いてはいけない */
+  .p-next {
+    display: block;
+    margin-top: 64px;
+    padding: 20px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+  a.p-next:hover { border-color: var(--gray-900); }
+  /* 大きな領域がフォーカス可能なので、全面を黄色で塗らずリング状の2重構造にする */
+  a.p-next:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    background-color: var(--gray-50);
+    box-shadow: 0 0 0 4px var(--focus-yellow);
+  }
+  /* gray-50 の上に載るので gray-800（11.29:1） */
+  .p-next__label {
+    margin: 0 0 4px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+    font-feature-settings: 'palt';
+  }
+  /* Std-20B-150。
+     DADS: コンテナ自体がリンクの場合もタイトルにアンダーラインを付与する */
+  .p-next__title {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+  a.p-next .p-next__title {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  a.p-next:visited .p-next__title { color: var(--link-visited); }
+  a.p-next:hover .p-next__title { text-decoration-thickness: 3px; }
+  a.p-next:active .p-next__title { color: var(--link-active); }
+  .p-next__desc {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+  }
+  /* ----- 参考 ----- */
+  .p-refs {
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  /* ----- フッター ----- */
+  .l-footer {
+    border-top: 1px solid var(--gray-420);
+    padding: 24px 0 40px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-footer p { margin: 0; }
+
+  /* ----- モバイル・タブレット: 768px 未満 ----- */
+  @media (max-width: 767px) {
+    body {
+      /* Std-16N-175 */
+      font-size: 16px;
+      line-height: 1.75;
+    }
+    .l-container { padding: 0 16px; }
+    .l-main { padding: 16px 0 56px; }
+    .l-breadcrumb { padding-top: 16px; }
+    /* Std-32B-150 */
+    h1 {
+      font-size: 32px;
+      line-height: 1.5;
+      letter-spacing: 0.01em;
+    }
+    /* Std-20N-150 */
+    .p-subtitle { font-size: 20px; }
+    /* Std-28B-150 */
+    .p-prose h2 { font-size: 28px; }
+    /* Std-22B-150 */
+    .p-prose h3 { font-size: 22px; }
+    .p-section { margin-top: 48px; }
+    /* Std-18N-160 */
+    .p-catch { font-size: 18px; line-height: 1.6; }
+    .p-toc { padding: 16px; }
+    .p-aside { padding: 16px; }
+    .p-next { padding: 16px; }
+    /* 3列を 375px に詰め込むと1行あたり数文字になって読めない。
+       列の多い表だけ、列幅を確保して横スクロールに切り替える */
+    .p-figure.is-wide .p-table { min-width: 560px; }
+    .p-figure.is-wide .p-table__hint { display: inline; }
+    .p-diagram .p-table__hint { display: inline; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="l-breadcrumb" aria-label="パンくず">
+  <div class="l-container">
+    <ol>
+      <li><a href="/">目次</a></li>
+      <li aria-current="page">SMA 構想</li>
+    </ol>
+  </div>
+</nav>
+
+<main class="l-main">
+  <div class="l-container">
+    <div class="p-prose">
+
+      <h1>SMA 構想</h1>
+      <p class="p-subtitle">AI 時代の CMS は、サイトを管理するエージェントになる</p>
+
+      <p class="p-catch">コードも、CMS の構造も、コンテンツも。AI への 1 つの指示で、すべてを変えられるようにする。</p>
+
+      <p>
+        ヘッドレス CMS は、コンテンツをコードから切り離すことで成功しました。しかし AI エージェントがサイトの運用を担うようになると、その分離が今度は足かせになります。このページでは、ヘッドレス CMS が何を解決し、どんな前提の上に立っているかを振り返ったうえで、AI 時代の CMS の理想像を提言します。
+      </p>
+
+      <nav class="p-toc" aria-label="このページの目次">
+        <p class="p-toc__title">このページの内容</p>
+        <ol>
+          <li><a href="#prologue">序　「FAQ を追加して」という一文</a></li>
+          <li><a href="#solved">第1章　ヘッドレス CMS は従来型 CMS の何を解決したのか</a></li>
+          <li><a href="#premises">第2章　ヘッドレス CMS の前提</a></li>
+          <li><a href="#ai-era">第3章　AI 時代における運用の前提</a></li>
+          <li><a href="#issues">第4章　SMA から見た、いまのヘッドレス CMS の課題</a></li>
+          <li><a href="#proposal">第5章　提言：コード・構造・コンテンツを等しく扱う</a></li>
+          <li><a href="#design">第6章　SMA の設計</a></li>
+          <li><a href="#storage">第7章　ストレージの設計</a></li>
+          <li><a href="#conclusion">結び　コンテンツ管理から、サイト管理へ</a></li>
+          <li><a href="#references">参考</a></li>
+        </ol>
+      </nav>
+
+      <!-- ===== 序 ===== -->
+      <section class="p-section" id="prologue">
+        <h2><span class="p-secnum">序</span>「FAQ を追加して」という一文</h2>
+
+        <p>
+          サイトの運営者が、AI にこう頼んだとします。「トップページに、よくある質問のセクションを追加して」。
+        </p>
+
+        <p>
+          指示は一文です。しかしヘッドレス CMS で構築したサイトでこれを実現するには、性質の異なる 3 つの変更が必要になります。
+        </p>
+
+        <ol>
+          <li><strong>コード</strong>：FAQ を表示するコンポーネントを実装し、トップページに配置する。変更先は Git リポジトリ</li>
+          <li><strong>CMS の構造</strong>：「質問」と「回答」をもつ FAQ 型をスキーマに定義し、トップページの型から参照できるようにする。変更先は CMS の管理画面か、スキーマ定義ファイル</li>
+          <li><strong>コンテンツ</strong>：質問と回答を実際に入力し、公開する。変更先は CMS の編集画面</li>
+        </ol>
+
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-fig1">図 1　1 つの指示が、置き場所も反映の手順も異なる 3 つの変更に分かれる。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-fig1">
+            <svg width="720" height="280" viewBox="0 0 720 280" role="img" aria-labelledby="cap-fig1">
+              <defs>
+                <marker id="f1-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+              <text class="d-note" x="336" y="28" text-anchor="middle">変更の内容</text>
+              <text class="d-note" x="592" y="28" text-anchor="middle">置き場所と反映の手順</text>
+
+              <rect class="d-box d-accent" x="16" y="118" width="172" height="64" rx="6" />
+              <text class="d-note" x="102" y="146" text-anchor="middle">AI への指示</text>
+              <text class="d-label" x="102" y="168" text-anchor="middle">「FAQ を追加して」</text>
+
+              <polyline class="d-line" points="188,150 218,150 218,70 248,70" marker-end="url(#f1-a)" />
+              <line class="d-line" x1="188" y1="150" x2="248" y2="150" marker-end="url(#f1-a)" />
+              <polyline class="d-line" points="188,150 218,150 218,230 248,230" marker-end="url(#f1-a)" />
+
+              <rect class="d-box" x="248" y="42" width="176" height="56" rx="4" />
+              <text class="d-label" x="336" y="66" text-anchor="middle">コード</text>
+              <text class="d-note" x="336" y="86" text-anchor="middle">FAQ コンポーネント</text>
+              <rect class="d-box" x="248" y="122" width="176" height="56" rx="4" />
+              <text class="d-label" x="336" y="146" text-anchor="middle">CMS の構造</text>
+              <text class="d-note" x="336" y="166" text-anchor="middle">FAQ 型の定義</text>
+              <rect class="d-box" x="248" y="202" width="176" height="56" rx="4" />
+              <text class="d-label" x="336" y="226" text-anchor="middle">コンテンツ</text>
+              <text class="d-note" x="336" y="246" text-anchor="middle">質問と回答</text>
+
+              <line class="d-line" x1="424" y1="70" x2="480" y2="70" marker-end="url(#f1-a)" />
+              <line class="d-line" x1="424" y1="150" x2="480" y2="150" marker-end="url(#f1-a)" />
+              <line class="d-line" x1="424" y1="230" x2="480" y2="230" marker-end="url(#f1-a)" />
+
+              <rect class="d-box" x="480" y="42" width="224" height="56" rx="4" />
+              <text class="d-label" x="592" y="66" text-anchor="middle">Git リポジトリ</text>
+              <text class="d-note" x="592" y="86" text-anchor="middle">PR → CI/CD → デプロイ</text>
+              <rect class="d-box" x="480" y="122" width="224" height="56" rx="4" />
+              <text class="d-label" x="592" y="146" text-anchor="middle">CMS の管理画面</text>
+              <text class="d-note" x="592" y="166" text-anchor="middle">スキーマを保存</text>
+              <rect class="d-box" x="480" y="202" width="224" height="56" rx="4" />
+              <text class="d-label" x="592" y="226" text-anchor="middle">CMS の編集画面</text>
+              <text class="d-note" x="592" y="246" text-anchor="middle">下書き → 公開</text>
+            </svg>
+          </div>
+        </figure>
+
+        <p>
+          今のヘッドレス CMS では、この 3 つは置き場所も、変更できる人も、本番に反映する手順も別々です。AI がどれほど賢くなっても、3 つの場所をまたいで整合性を取りながら作業する負担は残ります。
+        </p>
+
+        <p>
+          このページでは、<strong>コードもコンテンツの一部と見なし、AI への指示によってコード・CMS の構造・コンテンツをまとめて変更できる CMS</strong> を構想します。その名前を SMA（Site Management Agent）としました。
+        </p>
+
+        <p>
+          遠回りに見えますが、まずはヘッドレス CMS が何を解決したのかから振り返ります。理想像を描くには、今の仕組みがどんな前提の上に立っているかを知る必要があるからです。
+        </p>
+      </section>
+
+      <!-- ===== 第1章 ===== -->
+      <section class="p-section" id="solved">
+        <h2><span class="p-secnum">第1章</span>ヘッドレス CMS は従来型 CMS の何を解決したのか</h2>
+
+        <h3>従来型 CMS：表示とデータが一体だった</h3>
+
+        <p>
+          WordPress に代表される従来型 CMS は、コンテンツの保存・編集画面・HTML の生成を、ひとつのアプリケーションで担います。記事はデータベースに入り、リクエストのたびに PHP のテーマがそれを読み出して HTML を組み立てる。編集者が管理画面で「公開」を押せば、その瞬間からサイトに反映されます。
+        </p>
+
+        <p>
+          この一体性は、導入しやすいという大きな利点でした。けれどサイトの規模や用途が広がるにつれて、次のような限界が目立つようになります。
+        </p>
+
+        <ul>
+          <li><strong>フロントエンドの技術が縛られる</strong>。表示はテーマ（PHP のテンプレート）で書く前提で、React などのモダンなフロントエンド技術を素直に使えない</li>
+          <li><strong>Web 以外へ配信しにくい</strong>。コンテンツが HTML の生成と結びついているため、スマートフォンアプリなど他のチャネルで同じコンテンツを使い回しにくい</li>
+          <li><strong>性能とセキュリティの負担が大きい</strong>。リクエストごとの動的生成はキャッシュの工夫なしには遅く、公開サーバー上の管理画面やプラグインは攻撃の入口になりやすい</li>
+        </ul>
+
+        <h3>ヘッドレス CMS：コンテンツを API として切り出した</h3>
+
+        <p>
+          ヘッドレス CMS は、この一体構造から「頭」、つまり表示層を切り落としました。CMS が受け持つのは、コンテンツの構造定義・編集・保存だけです。コンテンツは API を通じて JSON などの形で取り出され、HTML をどう組み立てるかは CMS の外にあるフロントエンドが決めます。
+        </p>
+
+        <p>この分離によって、3 つの限界はそれぞれ解消されました。</p>
+
+        <ul>
+          <li><strong>フロントエンドを自由に選べる</strong>。Next.js でも Astro でもネイティブアプリでも、API を読めれば何でもよい</li>
+          <li><strong>複数のチャネルに配信できる</strong>。同じコンテンツを Web とアプリに同時に届けられる</li>
+          <li><strong>静的生成と CDN 配信を組み合わせられる</strong>。ビルド時に HTML を生成して CDN から配る Jamstack の構成と相性がよく、管理画面を公開サーバーから切り離せる</li>
+        </ul>
+
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-fig2">図 2　従来型 CMS は 1 つのアプリケーションが HTML まで生成する。ヘッドレス CMS は API を境にコンテンツと表示を切り離す。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-fig2">
+            <svg width="720" height="356" viewBox="0 0 720 356" role="img" aria-labelledby="cap-fig2">
+              <defs>
+                <marker id="f2-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+                <marker id="f2-b" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head--accent" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+
+              <!-- 従来型 CMS -->
+              <text class="d-label" x="180" y="26" text-anchor="middle">従来型 CMS</text>
+              <rect class="d-group" x="16" y="40" width="328" height="212" rx="6" />
+              <text class="d-note" x="180" y="62" text-anchor="middle">1 つのアプリケーション</text>
+              <rect class="d-box" x="56" y="72" width="248" height="36" rx="4" />
+              <text class="d-text" x="180" y="95" text-anchor="middle">管理画面</text>
+              <line class="d-line" x1="180" y1="108" x2="180" y2="136" marker-end="url(#f2-a)" />
+              <text class="d-note" x="192" y="127">保存</text>
+              <rect class="d-box" x="56" y="136" width="248" height="36" rx="4" />
+              <text class="d-text" x="180" y="159" text-anchor="middle">データベース</text>
+              <line class="d-line" x1="180" y1="172" x2="180" y2="200" marker-end="url(#f2-a)" />
+              <text class="d-note" x="192" y="191">読み出し</text>
+              <rect class="d-box" x="56" y="200" width="248" height="36" rx="4" />
+              <text class="d-text" x="180" y="223" text-anchor="middle">テーマ（PHP）</text>
+              <line class="d-line" x1="180" y1="252" x2="180" y2="296" marker-end="url(#f2-a)" />
+              <text class="d-note" x="192" y="279">HTML を動的に生成</text>
+              <rect class="d-box" x="100" y="296" width="160" height="40" rx="4" />
+              <text class="d-text" x="180" y="321" text-anchor="middle">ブラウザ</text>
+
+              <!-- ヘッドレス CMS -->
+              <text class="d-label" x="540" y="26" text-anchor="middle">ヘッドレス CMS</text>
+              <rect class="d-group" x="376" y="40" width="328" height="100" rx="6" />
+              <text class="d-note" x="540" y="62" text-anchor="middle">CMS</text>
+              <rect class="d-box" x="392" y="76" width="136" height="40" rx="4" />
+              <text class="d-text" x="460" y="101" text-anchor="middle">管理画面</text>
+              <line class="d-line" x1="528" y1="96" x2="560" y2="96" marker-end="url(#f2-a)" />
+              <rect class="d-box" x="560" y="76" width="128" height="40" rx="4" />
+              <text class="d-text" x="624" y="101" text-anchor="middle">コンテンツ DB</text>
+              <line class="d-line d-line--accent" x1="540" y1="140" x2="540" y2="192" marker-end="url(#f2-b)" />
+              <text class="d-note d-note--accent" x="552" y="171">API（JSON）</text>
+              <rect class="d-box" x="400" y="192" width="280" height="40" rx="4" />
+              <text class="d-text" x="540" y="217" text-anchor="middle">フロントエンド（Next.js など）</text>
+              <line class="d-line" x1="460" y1="232" x2="460" y2="296" marker-end="url(#f2-a)" />
+              <line class="d-line" x1="624" y1="232" x2="624" y2="296" marker-end="url(#f2-a)" />
+              <rect class="d-box" x="392" y="296" width="136" height="40" rx="4" />
+              <text class="d-text" x="460" y="321" text-anchor="middle">Web（CDN）</text>
+              <rect class="d-box" x="560" y="296" width="128" height="40" rx="4" />
+              <text class="d-text" x="624" y="321" text-anchor="middle">アプリ</text>
+            </svg>
+          </div>
+        </figure>
+
+        <aside class="p-aside" aria-labelledby="aside-history">
+          <p class="p-aside__title" id="aside-history">この流れをもっと詳しく</p>
+          <p>
+            WordPress の時代から Jamstack、Next.js に至る経緯は、<a href="/jamstack-history/">Jamstackと、その先のWeb</a> と <a href="/web-history/">Web技術開発史</a> で扱っています。
+          </p>
+        </aside>
+
+        <h3>本質は関心の分離</h3>
+
+        <p>
+          技術的な利点を並べましたが、ヘッドレス CMS が成し遂げたことを一言でまとめるなら、<strong>関心の分離</strong>です。コンテンツは編集者が CMS で管理し、コードは開発者が Git で管理する。両者は API という契約を挟んで、互いの領分に踏み込まずに仕事を進められるようになりました。
+        </p>
+
+        <p>
+          この分離は、人間どうしの分業として非常にうまく機能しています。ただし、うまく機能しているのは、ある前提が成り立っているからです。
+        </p>
+      </section>
+
+      <!-- ===== 第2章 ===== -->
+      <section class="p-section" id="premises">
+        <h2><span class="p-secnum">第2章</span>ヘッドレス CMS の前提</h2>
+
+        <p>
+          ヘッドレス CMS の設計には、明文化されていない前提がいくつも含まれています。ここでは 4 つを取り出します。
+        </p>
+
+        <h3>前提 1　変更する主体は、役割の分かれた人間である</h3>
+
+        <p>
+          ヘッドレス CMS が想定する利用者は、開発者と編集者の 2 種類です。開発者はスキーマを定義し、フロントエンドを実装する。編集者は、用意されたフォームにコンテンツを入力する。管理画面の権限設計も、この 2 つの役割を基本に組み立てられています。
+        </p>
+
+        <p>
+          裏を返せば、編集者がレイアウトを変えたいと思ったら、開発者に依頼するしかありません。それは制約であると同時に、コードの品質を守るための防波堤でもありました。
+        </p>
+
+        <h3>前提 2　層ごとに変更の頻度が違う</h3>
+
+        <p>
+          コード・CMS の構造・コンテンツの 3 層は、変わる頻度が大きく異なります。コンテンツは毎日のように更新されますが、スキーマやコンポーネントが変わるのは、リニューアルや機能追加のときくらいです。
+        </p>
+
+        <p>
+          だからこそ、「開発者が型を作り、編集者がその型を埋める」という分担が成り立ちます。型は滅多に変わらない土台で、その上でコンテンツだけが頻繁に動く。スキーマの変更は、開発者が計画的に行う特別なイベントとして扱われます。
+        </p>
+
+        <h3>前提 3　層ごとに別のシステムで管理する</h3>
+
+        <p>
+          3 層は、それぞれ別のシステムに住んでいます。コードは Git リポジトリにあり、変更はプルリクエストでレビューされ、CI/CD でデプロイされます。コンテンツは CMS のデータベースにあり、下書き・公開・版の履歴は CMS 独自の仕組みで管理されます。スキーマはその中間で、CMS の管理画面で定義する製品もあれば、コードとして Git に置く製品もあります。
+        </p>
+
+        <p>
+          変更の履歴も、レビューの手順も、本番への反映も、層ごとに別々です。序の FAQ の例では、スキーマの更新、コンポーネントのデプロイ、コンテンツの公開という 3 つの手順を、正しい順序で行う必要があります。順序を誤れば、存在しないフィールドを参照してビルドが壊れたり、表示先のないコンテンツが公開されたりします。
+        </p>
+
+        <p>
+          層をまたぐ整合性は、システムではなく人間どうしの調整で保たれています。チケットで依頼し、リリース日を合わせ、手順書に従う。それで回るのは、前提 1 と前提 2 が成り立っているからです。
+        </p>
+
+        <h3>前提 4　変更は人間の速度で起こる</h3>
+
+        <p>
+          最後の前提は、変更の速度と量です。人間が手で行う変更は 1 日に数件から数十件程度で、同じ箇所を複数人が同時に触ることは多くありません。CMS の同時編集対策が、下書きの分離や編集ロック程度で足りているのはそのためです。
+        </p>
+      </section>
+
+      <!-- ===== 第3章 ===== -->
+      <section class="p-section" id="ai-era">
+        <h2><span class="p-secnum">第3章</span>AI 時代における運用の前提</h2>
+
+        <p>
+          AI、とりわけ指示を受けて自律的に作業を進めるエージェントが運用に加わると、前章の 4 つの前提はそれぞれ崩れます。
+        </p>
+
+        <h3>変更の主体がエージェントになる</h3>
+
+        <p>
+          運営者や編集者は、変更を自分の手で行うのではなく、AI に自然言語で指示するようになります。そして自然言語の指示は、層の区別を気にしません。
+        </p>
+
+        <p>
+          「FAQ を追加して」は、コード・構造・コンテンツの 3 層にまたがります。「この見出しをもう少し目立たせて」は編集者の言葉としては自然ですが、実際にはスタイルの変更、つまりコードの変更です。開発者と編集者という役割の境界は、指示を実行するエージェントの側で溶けてしまいます。
+        </p>
+
+        <h3>層ごとの頻度の差が縮む</h3>
+
+        <p>
+          エージェントがコードを書けるようになると、コードを変更するコストは大きく下がります。新しいセクションのためにコンポーネントを作ることが、記事を 1 本書くのと同じくらいの手間でできるなら、コードとスキーマもコンテンツと同じ頻度で変わり始めます。
+        </p>
+
+        <p>
+          「型は滅多に変わらない土台」という前提がなくなれば、スキーマの変更を特別なイベントとして扱う運用は、日常の足かせになります。
+        </p>
+
+        <h3>層の分断が障害になる</h3>
+
+        <p>
+          人間にとって、3 つのシステムを行き来するのは面倒ではあっても、我慢できる手間でした。エージェントにとっては事情が違います。Git と CMS で別々の認証・API・変更履歴を扱い、デプロイと公開の順序を合わせ、途中で失敗したら層ごとに巻き戻す。変更の頻度が上がるほど、この分断は失敗の温床になります。
+        </p>
+
+        <p>
+          人間のレビューも難しくなります。1 つの指示から生じた変更が Git のプルリクエストと CMS の下書きに分かれていては、レビュアーは「この指示に対して何が変わったのか」を一望できません。
+        </p>
+
+        <h3>変更が並行して大量に起こる</h3>
+
+        <p>
+          エージェントは 1 体とは限りません。翻訳、SEO の改善、アクセシビリティの修正、デザインの調整をそれぞれ担うエージェントが、同時に同じサイトへ変更を加えることが考えられます。
+        </p>
+
+        <p>
+          変更の量は人間の速度を大きく超え、同じページや同じスキーマに複数の変更が重なることが日常になります。人間の役割は、変更を自分で行うことから、エージェントの変更をレビューし、承認することへ移っていきます。
+        </p>
+
+        <h3>コードも、コンテンツと見なす</h3>
+
+        <figure class="p-figure is-wide">
+          <figcaption class="p-table__caption" id="cap-premises">ヘッドレス CMS の前提と、AI 時代の運用の前提。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-table-wrap" tabindex="0" role="region" aria-labelledby="cap-premises">
+            <table class="p-table" aria-labelledby="cap-premises">
+              <thead>
+                <tr>
+                  <th scope="col">観点</th>
+                  <th scope="col">ヘッドレス CMS の前提</th>
+                  <th scope="col">AI 時代の前提</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">変更の主体</th>
+                  <td>役割の分かれた人間（開発者と編集者）</td>
+                  <td>自然言語の指示を受けたエージェント</td>
+                </tr>
+                <tr>
+                  <th scope="row">変更の頻度</th>
+                  <td>コードと構造はまれ、コンテンツは頻繁</td>
+                  <td>3 層とも頻繁</td>
+                </tr>
+                <tr>
+                  <th scope="row">管理するシステム</th>
+                  <td>層ごとに別（Git と CMS）。整合性は人間が調整する</td>
+                  <td>層の分断が摩擦と失敗の原因になる</td>
+                </tr>
+                <tr>
+                  <th scope="row">変更の速度と量</th>
+                  <td>人間の速度。同時編集はまれ</td>
+                  <td>複数のエージェントが並行して大量に変更する</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </figure>
+
+        <p>
+          4 つの前提が崩れた後に残る結論は、ひとつです。<strong>コードを、コンテンツとは別の世界に置いておく理由がなくなります。</strong>
+        </p>
+
+        <p>
+          ヘッドレス CMS はコンテンツを API として切り出し、コードから分離しました。AI 時代の CMS に必要なのは、分離した層をもう一度ひとつの管理下に置き、コードもスキーマもコンテンツも、同じように編集・レビュー・公開できる対象として扱うことです。
+        </p>
+
+        <p>
+          これは従来型 CMS への逆戻りではありません。表示とデータの結合を戻すのではなく、分離した層を「変更の管理」という面でだけ束ね直す、という意味です。フロントエンドの自由も、複数チャネルへの配信も、静的生成も手放さずに済みます。
+        </p>
+      </section>
+
+      <!-- ===== 第4章 ===== -->
+      <section class="p-section" id="issues">
+        <h2><span class="p-secnum">第4章</span>SMA から見た、いまのヘッドレス CMS の課題</h2>
+
+        <p>
+          第3章で見た前提の変化を、いまのヘッドレス CMS に当てはめてみます。エージェントが 3 層をまとめて変更する運用を前提にすると、7 つの課題が浮かび上がります。
+        </p>
+
+        <p>
+          ここで挙げるのは特定の製品の欠点ではなく、ヘッドレス CMS という設計が共通して抱えがちな傾向です。製品によっては、一部を補う機能を備えているものもあります。
+        </p>
+
+        <h3>課題 1　変更をまとめる単位がない</h3>
+
+        <p>
+          ヘッドレス CMS の版の管理は、基本的にエントリ単位です。記事 1 本、FAQ の 1 項目といった単位で下書きと公開を繰り返します。そのため、1 つの指示から生じた複数の変更を、ひとまとまりとして扱えません。
+        </p>
+
+        <p>
+          複数の変更を束ねて同時に公開するリリース機能を持つ製品もあります。ただし、束ねられるのはコンテンツだけで、コードのデプロイとは連動しません。
+        </p>
+
+        <h3>課題 2　コードとの間にトランザクションがない</h3>
+
+        <p>
+          CMS の公開とコードのデプロイは、Webhook などで片方向につながっているだけです。CMS でコンテンツを公開するとビルドが走る、という連携はできても、「スキーマを更新し、コードをデプロイし、コンテンツを公開する」という一連の手順を、順序を保証して実行する仕組みはありません。
+        </p>
+
+        <p>
+          途中で失敗したときも同じです。ビルドが壊れたらコードを戻し、CMS の変更も手で戻す。一括で巻き戻す手段がないので、層ごとに後始末をすることになります。
+        </p>
+
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-fig3">図 3　いまの構成。Git と CMS は別々のパイプラインで、片方向の Webhook でしかつながっていない。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-fig3">
+            <svg width="720" height="256" viewBox="0 0 720 256" role="img" aria-labelledby="cap-fig3">
+              <defs>
+                <marker id="f3-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+                <marker id="f3-b" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head--accent" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+
+              <rect class="d-box" x="16" y="110" width="112" height="44" rx="4" />
+              <text class="d-text" x="72" y="137" text-anchor="middle">エージェント</text>
+              <polyline class="d-line" points="128,132 149,132 149,62 170,62" marker-end="url(#f3-a)" />
+              <polyline class="d-line" points="128,132 149,132 149,218 170,218" marker-end="url(#f3-a)" />
+
+              <!-- Git のパイプライン -->
+              <text class="d-note" x="170" y="28">Git リポジトリ（独自の認証・変更履歴）</text>
+              <rect class="d-box" x="170" y="40" width="120" height="44" rx="4" />
+              <text class="d-text" x="230" y="67" text-anchor="middle">コード変更</text>
+              <line class="d-line" x1="290" y1="62" x2="310" y2="62" marker-end="url(#f3-a)" />
+              <rect class="d-box" x="310" y="40" width="120" height="44" rx="4" />
+              <text class="d-text" x="370" y="67" text-anchor="middle">プルリクエスト</text>
+              <line class="d-line" x1="430" y1="62" x2="450" y2="62" marker-end="url(#f3-a)" />
+              <rect class="d-box" x="450" y="40" width="120" height="44" rx="4" />
+              <text class="d-text" x="510" y="67" text-anchor="middle">CI/CD・ビルド</text>
+              <line class="d-line" x1="570" y1="62" x2="590" y2="62" marker-end="url(#f3-a)" />
+              <rect class="d-box" x="590" y="40" width="120" height="44" rx="4" />
+              <text class="d-text" x="650" y="67" text-anchor="middle">フロントエンド</text>
+
+              <!-- CMS のパイプライン -->
+              <text class="d-note" x="170" y="186">CMS（独自の認証・変更履歴）</text>
+              <rect class="d-box" x="170" y="196" width="120" height="44" rx="4" />
+              <text class="d-text" x="230" y="223" text-anchor="middle">CMS で編集</text>
+              <line class="d-line" x1="290" y1="218" x2="310" y2="218" marker-end="url(#f3-a)" />
+              <rect class="d-box" x="310" y="196" width="120" height="44" rx="4" />
+              <text class="d-text" x="370" y="223" text-anchor="middle">下書き</text>
+              <line class="d-line" x1="430" y1="218" x2="450" y2="218" marker-end="url(#f3-a)" />
+              <rect class="d-box" x="450" y="196" width="120" height="44" rx="4" />
+              <text class="d-text" x="510" y="223" text-anchor="middle">公開</text>
+              <line class="d-line" x1="570" y1="218" x2="590" y2="218" marker-end="url(#f3-a)" />
+              <rect class="d-box" x="590" y="196" width="120" height="44" rx="4" />
+              <text class="d-text" x="650" y="223" text-anchor="middle">配信 API</text>
+
+              <!-- 層をまたぐつながり -->
+              <line class="d-line d-line--accent d-line--dashed" x1="510" y1="196" x2="510" y2="84" marker-end="url(#f3-b)" />
+              <text class="d-note d-note--accent" x="502" y="145" text-anchor="end">Webhook（片方向）</text>
+              <line class="d-line" x1="650" y1="196" x2="650" y2="84" marker-end="url(#f3-a)" />
+              <text class="d-note" x="642" y="145" text-anchor="end">ビルド時に取得</text>
+            </svg>
+          </div>
+        </figure>
+
+        <h3>課題 3　プレビューにコード変更を含められない</h3>
+
+        <p>
+          ヘッドレス CMS のプレビューは、本番と同じコードの上で、コンテンツの下書きを表示する仕組みです。コンテンツだけを変えるなら、これで足ります。
+        </p>
+
+        <p>
+          しかし FAQ の例のように新しいコンポーネントが必要な変更では、未デプロイのコードと新しいコンテンツを組み合わせた姿を見なければなりません。そのためには、コードのプレビュー環境を別に用意し、CMS の下書きと手で結びつける必要があります。
+        </p>
+
+        <h3>課題 4　スキーマの変更とコンテンツの移行が分かれている</h3>
+
+        <p>
+          スキーマを管理画面で編集する製品では、スキーマの変更がコードと一緒に版管理されません。いつ誰がどのフィールドを変えたのかを、コードの変更と突き合わせて追うのが難しくなります。
+        </p>
+
+        <p>
+          既存のコンテンツを新しいスキーマに合わせて変換する移行ツールを提供している製品もあります。それでも、移行はスキーマの変更とは別の手順として実行するのが一般的です。スキーマだけ変わって移行が漏れる、という事故の余地が残ります。
+        </p>
+
+        <h3>課題 5　ブランチと競合検出が弱い</h3>
+
+        <p>
+          開発用・検証用に、コンテンツやスキーマの環境を丸ごと複製する機能を持つ製品はあります。しかしこれは、Git のブランチのように変更ごとに作業領域を切り、後で本流に統合するための仕組みではありません。
+        </p>
+
+        <p>
+          複数のエージェントがそれぞれの作業領域で変更し、公開前に層をまたいで競合を検出してマージする。こうした使い方は、いまのヘッドレス CMS では想定されていません。
+        </p>
+
+        <h3>課題 6　権限が人間の役割を前提にしている</h3>
+
+        <p>
+          権限の設計は、管理者・開発者・編集者といった人間の役割を単位に組み立てられています。外部から操作するための API トークンも、読み取り専用か、管理操作をすべて許すか、といった粗い粒度で発行されることが多くあります。
+        </p>
+
+        <p>
+          これでは、「翻訳エージェントは翻訳フィールドだけを変更できる」といった細かな限定がしにくくなります。また、変更の記録に残るのはトークンの持ち主で、「誰の指示で、どのエージェントが変えたか」までは辿れません。
+        </p>
+
+        <h3>課題 7　スキーマとコンポーネントの対応が暗黙になっている</h3>
+
+        <p>
+          どの型をどのコンポーネントで表示するのかという対応関係は、フロントエンドのコードの中にしかありません。CMS はスキーマを知っていても、それがサイトのどこにどう表示されるのかを知りません。
+        </p>
+
+        <p>
+          エージェントがスキーマを変更するとき、影響を受けるコンポーネントやページを知るには、コードを読み解いて推測するしかありません。
+        </p>
+
+        <h3>課題は、前提から生まれている</h3>
+
+        <figure class="p-figure">
+          <figcaption class="p-table__caption" id="cap-issues">いまのヘッドレス CMS の課題と、次の章の提言との対応。</figcaption>
+          <div class="p-table-wrap" tabindex="0" role="region" aria-labelledby="cap-issues">
+            <table class="p-table" aria-labelledby="cap-issues">
+              <thead>
+                <tr>
+                  <th scope="col">課題</th>
+                  <th scope="col">対応する提言</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1. 変更をまとめる単位がない</td>
+                  <td rowspan="3">提言 1　3 層を 1 つの変更単位で扱う</td>
+                </tr>
+                <tr>
+                  <td>2. コードとの間にトランザクションがない</td>
+                </tr>
+                <tr>
+                  <td>3. プレビューにコード変更を含められない</td>
+                </tr>
+                <tr>
+                  <td>4. スキーマの変更とコンテンツの移行が分かれている</td>
+                  <td>提言 2　スキーマの変更とコンテンツの移行をセットにする</td>
+                </tr>
+                <tr>
+                  <td>5. ブランチと競合検出が弱い</td>
+                  <td>提言 3　複数のエージェントを前提に並行制御する</td>
+                </tr>
+                <tr>
+                  <td>6. 権限が人間の役割を前提にしている</td>
+                  <td>提言 4　権限・承認・監査を備える</td>
+                </tr>
+                <tr>
+                  <td>7. スキーマとコンポーネントの対応が暗黙になっている</td>
+                  <td>提言 5　サイトの構造を機械が読める形で持つ</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </figure>
+
+        <p>
+          7 つの課題は、どれも第2章で見た前提から自然に生まれたものです。役割の分かれた人間が、層ごとに別のシステムで、人間の速度で変更する。その前提のもとでは合理的だった設計が、エージェントによる運用では障害になります。
+        </p>
+
+        <p>
+          次の章では、これらの課題を解消するために、SMA が備えるべき性質を提言します。
+        </p>
+      </section>
+
+      <!-- ===== 第5章 ===== -->
+      <section class="p-section" id="proposal">
+        <h2><span class="p-secnum">第5章</span>提言：コード・構造・コンテンツを等しく扱う</h2>
+
+        <p>以上を踏まえて、SMA に求められる性質を 5 つ提言します。</p>
+
+        <h3>提言 1　3 層を 1 つの変更単位で扱う</h3>
+
+        <p>
+          1 つの指示から生じた変更は、層をまたいでいても 1 つのまとまり、つまり<strong>チェンジセット</strong>として扱えるべきです。FAQ の例なら、コンポーネントの追加・スキーマの追加・コンテンツの入力が 1 つのチェンジセットに入ります。
+        </p>
+
+        <p>
+          チェンジセットは、まとめてプレビューし、まとめてレビューし、まとめて公開し、問題があればまとめて巻き戻せる必要があります。Git のプルリクエストに近い発想ですが、その対象をコードだけでなく、CMS の構造とコンテンツにまで広げるということです。スキーマ、コード、コンテンツといった公開の順序も、人間の手順書ではなくシステムが保証します。
+        </p>
+
+        <h3>提言 2　スキーマの変更とコンテンツの移行をセットにする</h3>
+
+        <p>
+          スキーマが頻繁に変わる以上、既存のコンテンツをどう追従させるかが問題になります。フィールドを改名したら既存の値を新しいフィールドへ移し、1 つのフィールドを 2 つに分けたら既存の値を分割する。こうしたコンテンツの移行（マイグレーション）は、スキーマの変更と同じチェンジセットに含め、プレビューの段階で移行後の姿を確認できるべきです。
+        </p>
+
+        <p>
+          データベースのマイグレーションがアプリケーションのコードと一緒に管理されるのと同じように、CMS のスキーマとコンテンツも一緒に進化させます。
+        </p>
+
+        <h3>提言 3　複数のエージェントを前提に並行制御する</h3>
+
+        <p>
+          複数のエージェントが同時に作業するなら、それぞれが独立した作業領域（ブランチ）を持ち、互いの途中経過に干渉しない必要があります。そして公開の前には、層をまたいで競合を検出しなければなりません。
+        </p>
+
+        <p>
+          競合は、同じ行を書き換えたという単純なものだけではありません。翻訳エージェントが訳し終えた直後に、別のエージェントが原文の見出しを変えた。あるエージェントが削除したフィールドを、別のエージェントが入力したコンテンツが使っていた。こうした意味の上での食い違いも、検出の対象にする必要があります。
+        </p>
+
+        <h3>提言 4　権限・承認・監査を備える</h3>
+
+        <p>
+          エージェントに何でも変えさせてよいわけではありません。エージェントごとに、変更できる範囲を限るべきです。たとえば翻訳エージェントはコンテンツの翻訳フィールドだけ、デザイン調整のエージェントはスタイルに関わるコードだけ、というように、層と対象を組み合わせて権限を定義します。
+        </p>
+
+        <p>
+          公開の前には、人間の承認を挟めるようにします。どの変更に承認を必須とするかは、影響の大きさに応じて設定できるとよいでしょう。誤字の修正は自動で公開し、スキーマの変更は必ず人間が確認する、といった具合です。
+        </p>
+
+        <p>
+          そして、すべての変更について「誰の指示で、どのエージェントが、何を変えたか」を記録に残します。人間が手を動かさなくなるほど、変更の経緯を後から辿れることが運用の信頼性を支えます。
+        </p>
+
+        <h3>提言 5　サイトの構造を機械が読める形で持つ</h3>
+
+        <p>
+          エージェントが 3 層を正しく変更するには、サイトの構造を理解できなければなりません。どのスキーマがどのコンポーネントで表示されるのか、どのページがどのコンテンツを参照しているのか、デザインの規約や文体の決まりは何か。こうした知識が人間の頭の中や散らばったドキュメントにしかなければ、エージェントは推測で作業することになります。
+        </p>
+
+        <p>
+          SMA は、サイトの構造と規約を、エージェントが問い合わせられる形で持つべきです。<a href="https://modelcontextprotocol.io/">MCP（Model Context Protocol）</a>のような、AI がツールやデータにアクセスするための標準的な接続方式を通じて公開すれば、特定の AI に縛られずに済みます。
+        </p>
+      </section>
+
+      <!-- ===== 第6章 ===== -->
+      <section class="p-section" id="design">
+        <h2><span class="p-secnum">第6章</span>SMA の設計</h2>
+
+        <p>
+          第5章の提言を、どのような部品で組み立てるか。この章では SMA の概念設計を示します。特定の製品や実装方式は前提にせず、部品の役割と、部品どうしの関係に焦点を当てます。
+        </p>
+
+        <h3>全体構成</h3>
+
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-fig4">図 4　SMA の全体構成。エージェントは MCP を通じて SMA コアだけに触れ、ストレージにも公開パイプラインにも直接は触れない。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-fig4">
+            <svg width="720" height="480" viewBox="0 0 720 480" role="img" aria-labelledby="cap-fig4">
+              <defs>
+                <marker id="f4-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+
+              <!-- 人間とエージェント -->
+              <rect class="d-box" x="178" y="16" width="160" height="52" rx="4" />
+              <text class="d-text" x="258" y="38" text-anchor="middle">運営者・編集者</text>
+              <text class="d-note" x="258" y="58" text-anchor="middle">指示と承認</text>
+              <line class="d-line" x1="258" y1="68" x2="258" y2="96" marker-end="url(#f4-a)" />
+              <text class="d-note" x="270" y="87">自然言語で指示</text>
+
+              <rect class="d-box" x="16" y="96" width="156" height="40" rx="4" />
+              <text class="d-text" x="94" y="121" text-anchor="middle">翻訳エージェント</text>
+              <rect class="d-box" x="180" y="96" width="156" height="40" rx="4" />
+              <text class="d-text" x="258" y="121" text-anchor="middle">SEO エージェント</text>
+              <rect class="d-box" x="344" y="96" width="156" height="40" rx="4" />
+              <text class="d-text" x="422" y="121" text-anchor="middle">デザインエージェント</text>
+              <line class="d-line" x1="94" y1="136" x2="94" y2="164" marker-end="url(#f4-a)" />
+              <line class="d-line" x1="258" y1="136" x2="258" y2="164" marker-end="url(#f4-a)" />
+              <line class="d-line" x1="422" y1="136" x2="422" y2="164" marker-end="url(#f4-a)" />
+              <text class="d-note" x="434" y="155">ツールを呼び出す</text>
+
+              <!-- MCP -->
+              <rect class="d-box" x="16" y="164" width="484" height="36" rx="4" />
+              <text class="d-text" x="258" y="187" text-anchor="middle">MCP サーバー（ツールとリソース）</text>
+              <line class="d-line" x1="258" y1="200" x2="258" y2="228" marker-end="url(#f4-a)" />
+
+              <!-- SMA コア -->
+              <rect class="d-group d-accent" x="16" y="228" width="484" height="156" rx="6" />
+              <text class="d-label" x="32" y="252">SMA コア</text>
+              <rect class="d-box" x="32" y="264" width="220" height="48" rx="4" />
+              <text class="d-text" x="142" y="293" text-anchor="middle">チェンジセット管理</text>
+              <rect class="d-box" x="264" y="264" width="220" height="48" rx="4" />
+              <text class="d-text" x="374" y="293" text-anchor="middle">ポリシーと承認</text>
+              <rect class="d-box" x="32" y="320" width="220" height="48" rx="4" />
+              <text class="d-text" x="142" y="349" text-anchor="middle">サイトグラフ</text>
+              <rect class="d-box" x="264" y="320" width="220" height="48" rx="4" />
+              <text class="d-text" x="374" y="349" text-anchor="middle">監査ログ</text>
+
+              <!-- ストレージ -->
+              <line class="d-line" x1="258" y1="384" x2="258" y2="416" marker-end="url(#f4-a)" />
+              <text class="d-note" x="270" y="405">版を読み書きする</text>
+              <rect class="d-box" x="16" y="416" width="232" height="48" rx="4" />
+              <text class="d-text" x="132" y="445" text-anchor="middle">コード・スキーマ</text>
+              <rect class="d-box" x="268" y="416" width="232" height="48" rx="4" />
+              <text class="d-text" x="384" y="445" text-anchor="middle">コンテンツ</text>
+
+              <!-- 公開パイプライン -->
+              <text class="d-label" x="616" y="252" text-anchor="middle">公開パイプライン</text>
+              <line class="d-line" x1="500" y1="282" x2="528" y2="282" marker-end="url(#f4-a)" />
+              <rect class="d-box" x="528" y="264" width="176" height="36" rx="4" />
+              <text class="d-text" x="616" y="287" text-anchor="middle">検証</text>
+              <line class="d-line" x1="616" y1="300" x2="616" y2="320" marker-end="url(#f4-a)" />
+              <rect class="d-box" x="528" y="320" width="176" height="36" rx="4" />
+              <text class="d-text" x="616" y="343" text-anchor="middle">プレビュー</text>
+              <line class="d-line" x1="616" y1="356" x2="616" y2="376" marker-end="url(#f4-a)" />
+              <rect class="d-box" x="528" y="376" width="176" height="36" rx="4" />
+              <text class="d-text" x="616" y="399" text-anchor="middle">段階的な公開</text>
+              <line class="d-line" x1="616" y1="412" x2="616" y2="432" marker-end="url(#f4-a)" />
+              <rect class="d-box" x="528" y="432" width="176" height="36" rx="4" />
+              <text class="d-text" x="616" y="455" text-anchor="middle">本番サイト</text>
+            </svg>
+          </div>
+        </figure>
+
+        <p>
+          設計の中心にある原則は、<strong>エージェントにストレージを直接触らせない</strong>ことです。エージェントは MCP を通じて SMA コアに変更を提案するだけで、Git リポジトリやコンテンツのデータベースに直接書き込むことも、本番に公開することもできません。すべての変更が SMA コアを通るので、権限の確認・チェンジセットへの記録・監査ログへの書き込みを、1 か所で漏れなく強制できます。
+        </p>
+
+        <p>SMA コアは、次の 4 つの部品で構成します。</p>
+
+        <ul>
+          <li><strong>チェンジセット管理</strong>：1 つの指示から生じた 3 層の変更を 1 つの単位として保持し、その状態を管理する</li>
+          <li><strong>ポリシーと承認</strong>：エージェントごとに許された操作かを判定し、公開に必要な承認を決める</li>
+          <li><strong>サイトグラフ</strong>：ページ・コンポーネント・型・フィールド・エントリの依存関係を保持する</li>
+          <li><strong>監査ログ</strong>：誰の指示で、どのエージェントが、何を変えたかを記録する</li>
+        </ul>
+
+        <p>
+          承認されたチェンジセットは、公開パイプラインに渡ります。パイプラインは検証とプレビューを経て、決められた順序で 3 層を段階的に本番へ反映します。
+        </p>
+
+        <h3>先行事例：Cloudflare OS の Gadget と Gatekeeper</h3>
+
+        <p>
+          SMA の設計を考えるうえで、大きなヒントになる先行事例があります。Cloudflare が 2026 年 8 月にオープンソースで公開した <a href="https://blog.cloudflare.com/cloudflare-os/">Cloudflare OS</a> です。社員一人ひとりにエージェントを与え、文書やアプリを作らせ、社内のシステムにつなぐための基盤で、CMS ではありません。それでも、エージェントに安全に変更をさせるための仕組みは、SMA が解くべき問題とよく似ています。
+        </p>
+
+        <p>
+          <strong>Gadget</strong> は、エージェントが作るアプリの単位です。アプリは利用者ごとの私的なインスタンスとして、隔離されたサンドボックスで動き、状態は Durable Object が持ちます。隔離されているので、利用者は足りない機能をエージェントに頼み、そのアプリのコードに足してもらえます。コードとデータがひとまとまりになり、どちらも気軽に変えられる対象になっている点は、「コードもコンテンツと見なす」という本稿の主張の実例といえます。
+        </p>
+
+        <p>
+          <strong>Gatekeeper</strong> は、Gadget やエージェントと外部サービスとの間に立つ、サービスごとの仲介役です。資格情報を自分で持ってエージェントには渡さず、特定のリソースだけへのアクセスを許し、すべての操作を記録します。エージェントは何の権限も持たない状態から始まり、必要なリソースへのアクセスを個別に要求します。
+        </p>
+
+        <p>
+          特に示唆的なのは、承認の扱いです。承認が必要な操作に出会うと、Gatekeeper は結果をシミュレートしてエージェントに作業を続けさせ、操作をキューに積みます。人間は後から、まとめてでも 1 件ずつでも承認できます。さらに Gatekeeper は、エージェントが何を読んだかを記録し、それに応じてその後に許す操作を決めます。
+        </p>
+
+        <figure class="p-figure is-wide">
+          <figcaption class="p-table__caption" id="cap-cfos">Cloudflare OS の仕組みと、SMA への当てはめ。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-table-wrap" tabindex="0" role="region" aria-labelledby="cap-cfos">
+            <table class="p-table" aria-labelledby="cap-cfos">
+              <thead>
+                <tr>
+                  <th scope="col">Cloudflare OS の仕組み</th>
+                  <th scope="col">SMA に当てはめると</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Gatekeeper が資格情報を持ち、エージェントに渡さない</td>
+                  <td>SMA コアが Git とコンテンツストアの資格情報を持ち、エージェントにはチェンジセットを通じた操作だけを許す</td>
+                </tr>
+                <tr>
+                  <td>権限ゼロから始め、リソースを指定して付与する</td>
+                  <td>エージェントには、チェンジセットと型・フィールドに限った権限だけを渡す（権限と監査の節）</td>
+                </tr>
+                <tr>
+                  <td>結果をシミュレートし、承認は後からまとめて行う</td>
+                  <td>チェンジセットの中で作業させ、承認はまとめて行う。承認待ちのチェンジセットの上に次を積める（チェンジセットの節）</td>
+                </tr>
+                <tr>
+                  <td>エージェントが読んだものに応じて、許す操作を変える</td>
+                  <td>公開前の情報を読んだエージェントには、公開中のページへの書き込みを禁じる（権限と監査の節）</td>
+                </tr>
+                <tr>
+                  <td>Gadget は隔離されたインスタンスなので、コードを自由に変えてよい</td>
+                  <td>チェンジセットごとの候補リリースを、本番から隔離された環境で動かす（第7章）</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </figure>
+
+        <p>
+          言い換えれば、SMA コアは、Git とコンテンツストアに対する Gatekeeper です。
+        </p>
+
+        <h3>チェンジセット</h3>
+
+        <p>
+          チェンジセットは、SMA における変更の最小単位です。1 つのチェンジセットは次の情報を持ちます。
+        </p>
+
+        <ul>
+          <li><strong>指示</strong>：誰が、どんな言葉で依頼したか</li>
+          <li><strong>担当エージェント</strong>：どのエージェントが変更を作ったか</li>
+          <li><strong>層ごとの差分</strong>：コードの差分、スキーマの差分、コンテンツの差分</li>
+          <li><strong>移行の手順</strong>：スキーマの変更に伴って、既存のコンテンツをどう変換するか</li>
+          <li><strong>状態</strong>：いまどの段階にあるか</li>
+        </ul>
+
+        <p>チェンジセットは、次の順に状態を進めます。</p>
+
+        <ol>
+          <li><strong>作成</strong>：エージェントがチェンジセットを開き、変更を積み上げる</li>
+          <li><strong>検証</strong>：ビルド、型の整合性（コンテンツがスキーマに合っているか、コンポーネントが存在するフィールドだけを読んでいるか）、リンク切れやアクセシビリティを自動で確かめる。失敗したら、理由を添えてエージェントに差し戻す</li>
+          <li><strong>レビュー</strong>：プレビュー環境で、3 層の変更を合わせた姿を確認できるようにする</li>
+          <li><strong>承認</strong>：ポリシーが求める承認を得る。自動で承認されるものもあれば、人間の確認が必須のものもある</li>
+          <li><strong>公開</strong>：公開パイプラインが、決められた順序で本番に反映する</li>
+        </ol>
+
+        <p>
+          承認を待つ間、エージェントの手を止める必要はありません。承認待ちのチェンジセットの上に、次のチェンジセットを積み重ねられるようにします。Gatekeeper が操作の結果をシミュレートしてエージェントに作業を続けさせるのと同じ考え方です。土台のチェンジセットが差し戻されたら、その上に積んだチェンジセットも作り直しの対象になります。
+        </p>
+
+        <p>
+          公開後に問題が見つかったときは、変更を打ち消す逆向きのチェンジセットを作って巻き戻します。履歴を消して元に戻すのではなく、巻き戻しも 1 つの変更として記録に残すためです。
+        </p>
+
+        <h3>公開の順序</h3>
+
+        <p>
+          3 層を一度に切り替えようとすると、どこかで「新しいコードが古いスキーマを読む」ような瞬間が生まれます。そこで SMA は、データベースの移行でよく使われる <strong>expand/contract パターン</strong>に従い、スキーマを拡張してから縮小する順序で公開します。
+        </p>
+
+        <ol>
+          <li><strong>スキーマを拡張する</strong>：新しいフィールドを追加する。古いフィールドは残しておく</li>
+          <li><strong>コンテンツを移行する</strong>：既存の値を、新しいフィールドへ写す</li>
+          <li><strong>コードをデプロイする</strong>：新しいフィールドを読む表示に切り替える</li>
+          <li><strong>新しいコンテンツを公開する</strong>：チェンジセットで追加・変更したコンテンツを公開する</li>
+          <li><strong>スキーマを縮小する</strong>：どこからも参照されなくなった古いフィールドを削除する。参照が残っていないことは、サイトグラフで確かめる</li>
+        </ol>
+
+        <p>
+          各段階の終わりで、サイトは常に正しく動く状態にあります。途中の段階で失敗しても、それまでの段階を逆順に戻せば、公開前の状態に復帰できます。人間が手順書で守っていた順序を、システムが保証するということです。
+        </p>
+
+        <h3>サイトグラフ</h3>
+
+        <p>
+          サイトグラフは、サイトを構成する要素とその依存関係を表すグラフです。ノードはページ・コンポーネント・型・フィールド・エントリで、エッジは「このページはこのコンポーネントを使う」「このコンポーネントはこのフィールドを読む」「このエントリはあのエントリの翻訳である」といった関係です。
+        </p>
+
+        <p>グラフは、次の 3 つの情報源から組み立てます。</p>
+
+        <ul>
+          <li><strong>スキーマの定義</strong>：型とフィールド、型どうしの参照</li>
+          <li><strong>コードの静的解析</strong>：どのコンポーネントが、どの型のどのフィールドを読んでいるか</li>
+          <li><strong>コンテンツの参照</strong>：どのエントリが、どのエントリを参照しているか</li>
+        </ul>
+
+        <p>
+          静的解析では、動的に組み立てられた参照を拾いきれないことがあります。そのため、コンポーネントが読むフィールドを宣言する規約を設け、解析と宣言の両方からグラフを作るのが現実的です。宣言と実際の読み取りが食い違えば、検証の段階で検出できます。
+        </p>
+
+        <p>
+          サイトグラフには 3 つの使い道があります。変更の影響範囲を求めること、後で述べる意味上の競合を検出すること、そしてエージェントに作業の文脈を与えることです。
+        </p>
+
+        <h3>並行制御</h3>
+
+        <p>
+          チェンジセットは、作成した時点の本流のスナップショットから分岐した作業領域を持ちます。複数のエージェントは、互いの途中経過を見ることなく、それぞれの作業領域で変更を進めます。
+        </p>
+
+        <p>
+          公開の前には、本流との統合を行います。統合は 2 段階です。
+        </p>
+
+        <ol>
+          <li><strong>層ごとのマージ</strong>：コードは行単位の 3-way マージ、スキーマはフィールド単位、コンテンツはエントリとフィールド単位でマージする。同じ箇所を両方が変えていれば、構文上の競合になる</li>
+          <li><strong>意味上の競合の検出</strong>：2 つのチェンジセットが変えた要素が、サイトグラフ上で依存関係によって結ばれていれば、競合の候補とする。原文の見出しの変更と、その見出しの翻訳。フィールドの削除と、そのフィールドへの入力。こうした組み合わせは、行が重ならなくても衝突している</li>
+        </ol>
+
+        <p>
+          競合が見つかったら、後から公開しようとしたチェンジセットを差し戻し、新しい本流の上で作り直すようエージェントに求めます。人間にとってマージの作り直しは重い作業ですが、エージェントにとっては安い作業です。複雑な自動マージに頼るより、差し戻して作り直すほうが単純で、結果も確かめやすくなります。
+        </p>
+
+        <h3>権限と監査</h3>
+
+        <p>
+          ポリシーは、「どのエージェントが」「どの層の」「どの対象に」「どの操作を」してよいかの組み合わせで定義します。対象は、コードならファイルのパス、スキーマなら型、コンテンツなら型とフィールドで指定します。翻訳エージェントには、コンテンツの翻訳フィールドへの書き込みだけを許す、といった具合です。
+        </p>
+
+        <p>
+          エージェントに渡すのは、Git やコンテンツストアの API トークンではありません。「このチェンジセットの中で、この型のこのフィールドを書き換えてよい」という、対象を限った権限（ケイパビリティ）です。資格情報そのものは、SMA コアだけが持ちます。
+        </p>
+
+        <p>
+          承認のルールも、チェンジセットの中身から決めます。コンテンツの軽微な修正だけなら自動で承認し、スキーマの縮小を含むなら人間の承認を必須にする。ルールは、変更の種類と影響範囲（サイトグラフから求める）を条件に書けるようにします。
+        </p>
+
+        <p>
+          判定には、エージェントが何を読んだかも使います。予約公開前の発表や社外秘の下書きを読んだエージェントには、公開中のページへの書き込みを許さない。Cloudflare OS の Gatekeeper が、エージェントの見たものに応じて方針を変えるのと同じ考え方です。
+        </p>
+
+        <p>
+          ここで重要なのは、<strong>ポリシー自体もチェンジセットで変更する</strong>ことです。ポリシーの変更には常に人間の承認を必須にしておけば、エージェントが自分の権限を自分で広げることはできません。
+        </p>
+
+        <p>
+          監査ログは追記専用とし、指示・チェンジセット・承認・公開を互いに結びつけて記録します。本番のある変更から、それを生んだ指示まで、いつでも辿れるようにするためです。
+        </p>
+
+        <h3>エージェント向けのインターフェース</h3>
+
+        <p>
+          SMA コアは、MCP サーバーとしてエージェントに機能を公開します。公開する機能は、読む機能と書く機能に分かれます。
+        </p>
+
+        <ul>
+          <li><strong>読む機能</strong>：サイトグラフの照会、スキーマとコンテンツの取得、変更の影響範囲の取得</li>
+          <li><strong>書く機能</strong>：チェンジセットを開く、コード・スキーマ・コンテンツの変更を加える、プレビューを依頼する、レビューに出す</li>
+          <li><strong>参照資料</strong>：デザインの規約、文体のガイド、用語集など、エージェントが判断の拠り所にする文書</li>
+        </ul>
+
+        <p>
+          書く機能は、すべてチェンジセットの中でしか働きません。そして、公開する機能はエージェントに与えません。公開は、承認を経た公開パイプラインだけが行います。
+        </p>
+      </section>
+
+      <!-- ===== 第7章 ===== -->
+      <section class="p-section" id="storage">
+        <h2><span class="p-secnum">第7章</span>ストレージの設計</h2>
+
+        <p>
+          第6章の部品は、どれもストレージの上に載っています。この章では、3 層のデータをどこに、どのような形で保存するかを考えます。
+        </p>
+
+        <h3>2 つの案</h3>
+
+        <p>
+          3 層のデータをどこに保存するかには、大きく 2 つの案があります。
+        </p>
+
+        <ul>
+          <li><strong>案 A　すべて Git に置く</strong>：コード、ファイルとして書いたスキーマ、JSON や Markdown のファイルとして書いたコンテンツを、1 つの Git リポジトリに置く。チェンジセットはブランチ、公開はマージに対応する</li>
+          <li><strong>案 B　ハイブリッド</strong>：コードとスキーマは Git に、コンテンツはブランチを持てる版管理付きのストアに置く。チェンジセットは、Git のブランチとコンテンツ側のブランチの組として表す</li>
+        </ul>
+
+        <figure class="p-figure is-wide">
+          <figcaption class="p-table__caption" id="cap-storage">ストレージの 2 つの案の比較。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-table-wrap" tabindex="0" role="region" aria-labelledby="cap-storage">
+            <table class="p-table" aria-labelledby="cap-storage">
+              <thead>
+                <tr>
+                  <th scope="col">観点</th>
+                  <th scope="col">案 A　すべて Git</th>
+                  <th scope="col">案 B　ハイブリッド</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">仕組みの単純さ</th>
+                  <td>単純。Git の機能をそのまま使える</td>
+                  <td>複雑。2 つの版管理を束ねる仕組みが要る</td>
+                </tr>
+                <tr>
+                  <th scope="row">一括の公開と巻き戻し</th>
+                  <td>1 回のマージで自然に実現できる</td>
+                  <td>2 つのストアをまたいで調整する必要がある</td>
+                </tr>
+                <tr>
+                  <th scope="row">コンテンツの規模</th>
+                  <td>件数や画像が増えるとリポジトリが重くなる</td>
+                  <td>大量のコンテンツや画像を扱える</td>
+                </tr>
+                <tr>
+                  <th scope="row">検索・絞り込み</th>
+                  <td>別に索引を作る必要がある</td>
+                  <td>ストアの機能で扱える</td>
+                </tr>
+                <tr>
+                  <th scope="row">反映の速さ</th>
+                  <td>公開のたびにビルドが要る</td>
+                  <td>コンテンツだけなら即時に反映できる</td>
+                </tr>
+                <tr>
+                  <th scope="row">編集者の同時編集</th>
+                  <td>向かない</td>
+                  <td>ストアの設計次第で対応できる</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </figure>
+
+        <p>
+          案 A は、コンテンツの量が限られ、更新の即時性をそれほど求めないサイトに向きます。案 B は、大量のコンテンツを頻繁に更新するサイトに向きますが、2 つのストアをまたいで一括の公開と巻き戻しを実現する仕組みを、自前で作り込む必要があります。
+        </p>
+
+        <p>
+          どちらを選んでも、チェンジセット・サイトグラフ・ポリシーという上位の設計は変わりません。SMA ではストレージを SMA コアの下に隠し、エージェントからはどちらの案かが見えないようにします。そうしておけば、小さく案 A で始め、規模が大きくなったら案 B へ移る、という道も残せます。
+        </p>
+        <p>
+          以下では、設計上の課題が多い案 B を掘り下げます。
+        </p>
+
+        <h3>案 B のデータモデル</h3>
+
+        <p>
+          コンテンツストアは、エントリを上書きしません。エントリを編集するたびに、新しい<strong>リビジョン</strong>を追記します。リビジョンは一度書いたら変更しない不変のデータで、内容・作成者・準拠するスキーマの版・親のリビジョンを持ちます。準拠するスキーマの版を持つので、スキーマが変わったときに、どのエントリに移行が必要かを判定できます。
+        </p>
+
+        <p>
+          ブランチは、「どのエントリが、いまどのリビジョンか」の対応表で表します。この対応表を<strong>マニフェスト</strong>と呼ぶことにします。本流も 1 つのマニフェストで、チェンジセットを開くことは、本流のマニフェストを写して自分用のマニフェストを作ることにあたります。写すといっても、変更したエントリの分だけを記録し、残りは元のマニフェストを参照すれば済むので、分岐のコストはほとんどかかりません。
+        </p>
+
+        <p>
+          マージはエントリ単位で行います。チェンジセットのマニフェストと本流のマニフェストを、分岐した時点のマニフェスト（共通の祖先）と比べ、片方だけが変えたエントリはそのまま採用し、両方が変えたエントリはフィールド単位で比べます。同じフィールドを両方が変えていれば、構文上の競合です。
+        </p>
+
+        <p>
+          これは Git がファイルとディレクトリで行っていることを、エントリとフィールドの単位で行うものです。Git と違うのは、検索や絞り込みのための索引をストアが持てることと、エントリ単位で権限を判定できることです。
+        </p>
+
+        <h3>一括の公開：リリースの付け替え</h3>
+
+        <p>
+          案 B の最大の難所は、Git とコンテンツストアという 2 つのストアをまたいで、一括で公開し、一括で巻き戻すことです。2 つのデータベースを同時に更新する分散トランザクションは、作るのも運用するのも困難です。
+        </p>
+
+        <p>
+          ここで、両方のストアが「書き換えない版」を持っていることが効いてきます。Git のコミットは不変で、コンテンツのマニフェストも、公開に使う時点で凍結できます。そこで本番のサイトを、<strong>リリース</strong>という版の組で表します。
+        </p>
+
+        <ul>
+          <li><strong>コードのデプロイ</strong>：Git のあるコミットからビルドしたもの</li>
+          <li><strong>スキーマの版</strong>：同じコミットに含まれるスキーマ定義</li>
+          <li><strong>コンテンツのマニフェスト</strong>：凍結したマニフェスト</li>
+        </ul>
+
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-fig5">図 5　リリースは、コードの版とコンテンツの版の組。本番は 1 つのポインタでリリースを指し、公開も巻き戻しもその付け替えで行う。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-fig5">
+            <svg width="720" height="300" viewBox="0 0 720 300" role="img" aria-labelledby="cap-fig5">
+              <defs>
+                <marker id="f5-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+                <marker id="f5-b" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head--accent" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+
+              <!-- 行の見出し -->
+              <text class="d-label" x="16" y="56">Git</text>
+              <text class="d-note" x="16" y="76">コード・スキーマ</text>
+              <text class="d-label" x="16" y="148">リリース</text>
+              <text class="d-note" x="16" y="168">版の組</text>
+              <text class="d-label" x="16" y="252">コンテンツストア</text>
+              <text class="d-note" x="16" y="272">マニフェスト</text>
+
+              <!-- Git のコミット -->
+              <rect class="d-box" x="200" y="40" width="100" height="40" rx="4" />
+              <text class="d-text" x="250" y="65" text-anchor="middle">コミット a1</text>
+              <line class="d-line" x1="300" y1="60" x2="340" y2="60" marker-end="url(#f5-a)" />
+              <rect class="d-box" x="340" y="40" width="100" height="40" rx="4" />
+              <text class="d-text" x="390" y="65" text-anchor="middle">コミット a2</text>
+              <line class="d-line" x1="440" y1="60" x2="480" y2="60" marker-end="url(#f5-a)" />
+              <rect class="d-box" x="480" y="40" width="100" height="40" rx="4" />
+              <text class="d-text" x="530" y="65" text-anchor="middle">コミット a3</text>
+
+              <!-- コンテンツのマニフェスト -->
+              <rect class="d-box" x="200" y="236" width="100" height="40" rx="4" />
+              <text class="d-text" x="250" y="261" text-anchor="middle">m1</text>
+              <line class="d-line" x1="300" y1="256" x2="340" y2="256" marker-end="url(#f5-a)" />
+              <rect class="d-box" x="340" y="236" width="100" height="40" rx="4" />
+              <text class="d-text" x="390" y="261" text-anchor="middle">m2</text>
+              <line class="d-line" x1="440" y1="256" x2="480" y2="256" marker-end="url(#f5-a)" />
+              <rect class="d-box" x="480" y="236" width="100" height="40" rx="4" />
+              <text class="d-text" x="530" y="261" text-anchor="middle">m3</text>
+
+              <!-- リリース -->
+              <rect class="d-box" x="200" y="132" width="100" height="40" rx="4" />
+              <text class="d-text" x="250" y="157" text-anchor="middle">リリース 1</text>
+              <line class="d-line d-line--dashed" x1="250" y1="132" x2="250" y2="80" marker-end="url(#f5-a)" />
+              <line class="d-line d-line--dashed" x1="250" y1="172" x2="250" y2="236" marker-end="url(#f5-a)" />
+              <rect class="d-box" x="480" y="132" width="100" height="40" rx="4" />
+              <text class="d-text" x="530" y="157" text-anchor="middle">リリース 2</text>
+              <line class="d-line d-line--dashed" x1="530" y1="132" x2="530" y2="80" marker-end="url(#f5-a)" />
+              <line class="d-line d-line--dashed" x1="530" y1="172" x2="530" y2="236" marker-end="url(#f5-a)" />
+              <text class="d-note" x="310" y="157">前の版</text>
+              <text class="d-note" x="470" y="157" text-anchor="end">いまの版</text>
+
+              <!-- 本番のポインタ -->
+              <rect class="d-box d-accent" x="616" y="132" width="88" height="40" rx="4" />
+              <text class="d-label" x="660" y="157" text-anchor="middle">本番</text>
+              <line class="d-line d-line--accent" x1="616" y1="152" x2="580" y2="152" marker-end="url(#f5-b)" />
+              <text class="d-note d-note--accent" x="660" y="196" text-anchor="middle">付け替える</text>
+            </svg>
+          </div>
+        </figure>
+        <p>
+          本番が見るのは、「本番」という 1 つのポインタが指すリリースだけです。公開とは、新しいリリースを組み立てて検証し、ポインタを付け替えることです。付け替えは 1 か所への書き込みなので、一括で起こります。巻き戻しは、ポインタを前のリリースに戻すだけです。前のリリースが指すコミットもマニフェストも消えていないので、確実に元の姿へ戻れます。
+        </p>
+
+        <p>
+          そのためには、フロントエンドが「最新のコンテンツ」ではなく、「リリースが指すマニフェストのコンテンツ」を読む必要があります。静的生成なら、ビルドの時点でマニフェストを固定すれば、ビルドの成果物そのものがリリースになります。リクエストのたびに描画する構成なら、フロントエンドはリリースを指定してコンテンツを問い合わせます。
+        </p>
+
+        <p>
+          第6章で見た expand/contract の各段階も、それぞれ 1 つのリリースとして順に付け替えていけば、途中のどの時点でも、本番は整合した版の組を指していることになります。
+        </p>
+
+        <h3>プレビューと即時反映</h3>
+
+        <p>
+          プレビューも同じ仕組みで作れます。チェンジセットごとに、ブランチのコードからビルドしたデプロイと、チェンジセットのマニフェストを組にした<strong>候補リリース</strong>を作り、専用の URL で表示します。コードの変更とコンテンツの変更を合わせた姿を、本番と同じ方法で確認できます。第4章の課題 3 への答えです。
+        </p>
+
+        <p>
+          候補リリースは、チェンジセットごとに隔離されたサイトの複製です。Cloudflare OS の Gadget が、隔離されたインスタンスだからこそコードを自由に変えられるのと同じく、候補リリースは本番から切り離されているので、エージェントはその中でコードも構造もコンテンツも自由に変えられます。
+        </p>
+
+        <p>
+          コンテンツだけの変更なら、コードのデプロイはそのままに、マニフェストだけを差し替えた新しいリリースを作ります。リクエストのたびに描画する構成なら、ポインタの付け替えだけで即時に反映できます。静的生成の構成でも、変わったエントリに依存するページだけをサイトグラフで特定し、作り直せば済みます。
+        </p>
+
+        <h3>案 B の難しさ</h3>
+
+        <p>案 B には、作り込まなければならない部分も多くあります。</p>
+
+        <ul>
+          <li><strong>古いリビジョンの掃除</strong>：どのリリースからも、開いているチェンジセットからも参照されなくなったリビジョンを回収する仕組みが要る。一方で、監査のために残す期間も決める必要がある</li>
+          <li><strong>ブランチ上の検索</strong>：本流の索引はストアが持てるが、チェンジセットごとに完全な索引を作るのは重い。本流の索引に、チェンジセットで変えたエントリだけを重ねて検索する、といった工夫が要る</li>
+          <li><strong>画像などの大きなファイル</strong>：リビジョンに直接は入れず、内容のハッシュで参照する。同じファイルは一度だけ保存され、しかも不変なので、マニフェストと同じように版の組に入れられる</li>
+          <li><strong>人間の同時編集</strong>：同じチェンジセットを複数の編集者が同時に編集するなら、エントリ単位でリアルタイムに共同編集する仕組みが別に要る</li>
+        </ul>
+
+        <h3>中間の選択肢：Git 互換のリポジトリを大量に使う</h3>
+
+        <p>
+          案 A と案 B の間には、もう 1 つの選択肢があります。Git 互換のリポジトリを、1 つではなく大量に使う方法です。
+        </p>
+
+        <p>
+          Cloudflare が 2026 年 4 月に発表した <a href="https://blog.cloudflare.com/artifacts-git-for-agents-beta/">Artifacts</a> は、エージェント向けの Git 互換の版管理ストレージで、リポジトリを数千万単位で作れることをうたっています。用途として、コードだけでなく、顧客ごとの設定を巻き戻せる形で持つことも挙げられています（発表時点ではベータ版）。
+        </p>
+
+        <p>
+          こうしたストアがあれば、コンテンツをページ・言語・コレクションといった単位で別々のリポジトリに分け、Git のブランチ・差分・マージをそのまま使いながら、巨大な 1 つのリポジトリになるのを避けられます。リリースは複数のリポジトリのコミットの組として表せばよく、上で述べた付け替えの仕組みはそのまま使えます。ただし、検索のための索引は別に作る必要があります。
+        </p>
+      </section>
+
+      <!-- ===== 結び ===== -->
+      <section class="p-section" id="conclusion">
+        <h2><span class="p-secnum">結び</span>コンテンツ管理から、サイト管理へ</h2>
+
+        <p>
+          CMS は Content Management System、つまりコンテンツを管理するシステムとして生まれました。ヘッドレス CMS はその「コンテンツ」を純化し、コードから切り離すことで成功しました。
+        </p>
+
+        <p>
+          けれど、AI への 1 つの指示がコードも構造もコンテンツも変える時代には、管理すべき単位はコンテンツではなく、サイトそのものです。そして管理の担い手は、人間が操作するシステムから、人間の指示を受けて動くエージェントへと移っていきます。
+        </p>
+
+        <p>
+          SMA（Site Management Agent）という名前には、この 2 つの移行を込めました。コード・構造・コンテンツを等しく扱い、複数のエージェントによる変更を受け止め、人間がそのすべてを見渡して承認できる。それが、AI 時代の CMS の理想像だと考えます。
+        </p>
+      </section>
+
+      <!-- ===== 参考 ===== -->
+      <section class="p-section" id="references">
+        <h2>参考</h2>
+        <ul class="p-refs">
+          <li><a href="https://jamstack.org/">Jamstack</a></li>
+          <li><a href="https://modelcontextprotocol.io/">Model Context Protocol</a></li>
+          <li><a href="https://blog.cloudflare.com/cloudflare-os/">Cloudflare OS（Cloudflare Blog, 2026-08-05）</a></li>
+          <li><a href="https://github.com/cloudflare/cloudflare-os">cloudflare/cloudflare-os（GitHub）</a></li>
+          <li><a href="https://blog.cloudflare.com/artifacts-git-for-agents-beta/">Artifacts: versioned storage that speaks Git（Cloudflare Blog, 2026-04-16）</a></li>
+        </ul>
+      </section>
+
+      <a class="p-next" href="/sma-concept/design/" aria-labelledby="next-design">
+        <p class="p-next__label">次のページ</p>
+        <p class="p-next__title" id="next-design">SMA 設計編 — Cloudflare で組み立てる</p>
+        <p class="p-next__desc">本編で描いた SMA を、Cloudflare のサービスの上に具体的に組み立てます。構成・データモデル・公開の流れを、図を中心に追います。</p>
+      </a>
+
+    </div>
+  </div>
+</main>
+
+<footer class="l-footer">
+  <div class="l-container">
+    <p>mutexn</p>
+  </div>
+</footer>
+
+</body>
+</html>
