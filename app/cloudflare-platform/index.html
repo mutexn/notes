@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cloudflare プラットフォーム — 通常のサーバーと DB から読み解く</title>
+<meta name="description" content="Workers・Durable Objects・D1・R2・AI Gateway を、通常の Web サーバーと RDB の構成と比べながら図で理解する。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  /* =======================================================================
+     デジタル庁デザインシステム（DADS）準拠
+     カラー値の出典: @digital-go-jp/design-tokens v2.0.1
+     トークンと l- / p- の命名は app/index.html と app/physics/ に揃える
+     ======================================================================= */
+  :root {
+    --white: #ffffff;
+    --gray-50: #f2f2f2;
+    --gray-420: #949494;   /* 対白 3.03:1  非テキスト下限 */
+    --gray-536: #767676;   /* 対白 4.54:1  テキスト下限 */
+    --gray-800: #333333;   /* 対白 12.63:1 */
+    --gray-900: #1a1a1a;   /* 対白 17.40:1 */
+    --black: #000000;
+    --link: #0017c1;           /* blue-900     対白 11.10:1 */
+    --link-visited: #8b008b;   /* magenta-900  対白  8.50:1 */
+    --link-active: #ac3e00;    /* orange-900   対白  6.10:1 */
+    --focus-yellow: #ffd43d;   /* yellow-300   フォーカス（変更禁止） */
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--white);
+    color: var(--gray-900);
+    /* Std-17N-170 */
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 17px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    /* 文節を単位に折る */
+    word-break: auto-phrase;
+    /* 小書き仮名・長音符を行頭に置かない */
+    line-break: strict;
+    /* 最終行に 1〜2 文字だけ残る折り返しを避ける */
+    text-wrap: pretty;
+  }
+
+  h1, h2, h3 { text-wrap: balance; }
+
+  /* ----- フォーカスインジケーター: Yellow-300 と Black の2重構造 ----- */
+  a:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 2px;
+    background-color: var(--focus-yellow);
+    color: var(--gray-900);
+    box-shadow: 0 0 0 2px var(--focus-yellow);
+    text-decoration-color: var(--gray-900);
+  }
+
+  /* ----- レイアウト ----- */
+  .l-container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .l-main { padding: 24px 0 80px; }
+
+  /* ----- パンくず -----
+     DADS components/breadcrumb: ヘッダーとページ見出しの間に置き、
+     コンテンツ幅を超える場合は改行する */
+  .l-breadcrumb {
+    padding: 24px 0 0;
+    /* Std-16N-170 */
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-breadcrumb ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 8px;
+  }
+  .l-breadcrumb li { display: flex; align-items: center; gap: 8px; }
+  .l-breadcrumb li + li::before { content: '\203A'; color: var(--gray-536); }
+
+  /* ----- 本文カラム -----
+     DADS foundations/layout のカラムオフセットに倣い、読み物は幅を絞る */
+  .p-prose { max-width: 720px; }
+
+  /* Std-45B-140 */
+  h1 {
+    font-size: 45px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0;
+    margin: 0 0 8px;
+  }
+  /* Std-24N-150 */
+  .p-subtitle {
+    margin: 0 0 24px;
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+
+  .p-prose p { margin: 0 0 1.2em; }
+  .p-prose > p:last-child { margin-bottom: 0; }
+
+  /* Std-32B-150 */
+  .p-prose h2 {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    margin: 64px 0 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gray-420);
+  }
+
+  /* ----- 本文中のリンク: 色以外にも下線で示す ----- */
+  .p-prose a, .l-breadcrumb a {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  .p-prose a:visited, .l-breadcrumb a:visited { color: var(--link-visited); }
+  .p-prose a:hover, .l-breadcrumb a:hover { text-decoration-thickness: 3px; }
+  .p-prose a:active, .l-breadcrumb a:active { color: var(--link-active); }
+
+  /* ----- 章ナビゲーション ----- */
+  .p-chapters {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 16px;
+  }
+  /* .p-prose a の下線・色は本文中のテキストリンク用。
+     ブロック全体を包むリンクには効かせない（下線はタイトルだけに付ける） */
+  .p-prose a.p-chapter {
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+
+  /* DADS: コンテナ自体をクリッカブルエリア（フォーカス可能エリア）にできる。
+     その場合、コンテナ内に別のリンクを置いてはいけない */
+  .p-chapter {
+    display: block;
+    padding: 20px;
+    background: var(--white);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+  a.p-chapter:hover { border-color: var(--gray-900); }
+  /* 大きな領域がフォーカス可能なので、全面を黄色で塗らずリング状の2重構造にする */
+  a.p-chapter:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    background-color: var(--white);
+    box-shadow: 0 0 0 4px var(--focus-yellow);
+  }
+  /* 未公開の章。リンクを張らず、状態をテキストでも示す */
+  .p-chapter.is-upcoming { background: var(--gray-50); }
+  /* gray-50 の上では gray-536 が 4.06:1 でテキスト下限に届かないため一段濃くする */
+  .p-chapter.is-upcoming .p-chapter__label { color: var(--gray-800); }  /* 対 gray-50 11.29:1 */
+  .p-chapter__label {
+    margin: 0 0 4px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+    font-feature-settings: 'palt';
+  }
+  /* Std-20B-150。
+     DADS: コンテナ自体がリンクの場合もタイトルにアンダーラインを付与する */
+  .p-chapter__title {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+  a.p-chapter .p-chapter__title {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  a.p-chapter:visited .p-chapter__title { color: var(--link-visited); }
+  a.p-chapter:hover .p-chapter__title { text-decoration-thickness: 3px; }
+  a.p-chapter:active .p-chapter__title { color: var(--link-active); }
+  .p-chapter__desc {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+  }
+  /* 状態チップ。gray-50 の上に載るので文字は gray-800（対 gray-50 11.29:1）、
+     枠は gray-536（対 gray-50 4.06:1 で非テキスト下限 3:1 を満たす） */
+  .p-status {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 0 8px;
+    border: 1px solid var(--gray-536);
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+    vertical-align: middle;
+  }
+
+  /* ----- フッター ----- */
+  .l-footer {
+    border-top: 1px solid var(--gray-420);
+    padding: 24px 0 40px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-footer p { margin: 0; }
+
+  /* ----- モバイル・タブレット: 768px 未満 ----- */
+  @media (max-width: 767px) {
+    body {
+      /* Std-16N-175 */
+      font-size: 16px;
+      line-height: 1.75;
+    }
+    .l-container { padding: 0 16px; }
+    .l-main { padding: 16px 0 56px; }
+    .l-breadcrumb { padding-top: 16px; }
+    /* Std-32B-150 */
+    h1 {
+      font-size: 32px;
+      line-height: 1.5;
+      letter-spacing: 0.01em;
+    }
+    /* Std-20N-150 */
+    .p-subtitle {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+    /* Std-28B-150 */
+    .p-prose h2 {
+      font-size: 28px;
+      margin-top: 48px;
+    }
+    .p-chapter { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="l-breadcrumb" aria-label="パンくず">
+  <div class="l-container">
+    <ol>
+      <li><a href="/">目次</a></li>
+      <li aria-current="page">Cloudflare プラットフォーム</li>
+    </ol>
+  </div>
+</nav>
+
+<main class="l-main">
+  <div class="l-container">
+    <div class="p-prose">
+
+      <h1>Cloudflare プラットフォーム</h1>
+      <p class="p-subtitle">通常のサーバーと DB から読み解く</p>
+
+      <p>
+        Web アプリケーションの定番の構成は、ロードバランサの後ろにアプリケーションサーバーを並べ、その奥にリレーショナルデータベースとオブジェクトストレージを置く形です。Cloudflare の開発者プラットフォームも、同じ仕事をする部品をひととおり揃えています。
+      </p>
+
+      <p>
+        ただし、部品の形が違います。サーバーは常駐せず、リクエストのたびに世界中のデータセンターで起動します。データベースは、1 台の大きなサーバーではなく、小さな単位にいくつも分けて持つことが前提になっています。
+      </p>
+
+      <p>
+        このノートでは、Workers・Durable Objects・D1・R2・AI Gateway を中心に、各部品が<strong>通常の構成のどれに当たり、どこが違うのか</strong>を図で確かめていきます。序章で全体の地図を描き、各章で 1 つずつ掘り下げ、終章で組み立てます。
+      </p>
+
+      <h2>章</h2>
+
+      <ul class="p-chapters">
+        <li>
+          <a class="p-chapter" href="/cloudflare-platform/overview/" aria-labelledby="ch-overview">
+            <p class="p-chapter__label">序章</p>
+            <h3 class="p-chapter__title" id="ch-overview">全体の地図 — 通常の構成と並べてみる</h3>
+            <p class="p-chapter__desc">
+              ロードバランサ・アプリケーションサーバー・RDB・オブジェクトストレージという定番の構成に、Cloudflare の部品を重ねる。<br />
+              エッジで動くとはどういうことか、状態をどこに置くのかを先に押さえる。
+            </p>
+          </a>
+        </li>
+        <li>
+          <div class="p-chapter is-upcoming">
+            <p class="p-chapter__label">第1章</p>
+            <h3 class="p-chapter__title">
+              Workers — 常駐しないサーバー<span class="p-status">準備中</span>
+            </h3>
+            <p class="p-chapter__desc">
+              プロセスやコンテナではなく、V8 の isolate の上でリクエストごとに動く。<br />
+              何が速くなり、何ができなくなるのか。接続文字列の代わりに使う binding の考え方も扱う。
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="p-chapter is-upcoming">
+            <p class="p-chapter__label">第2章</p>
+            <h3 class="p-chapter__title">
+              Durable Objects — 名前で 1 つに決まるサーバー<span class="p-status">準備中</span>
+            </h3>
+            <p class="p-chapter__desc">
+              通常の構成では Redis やロックで実現する「1 か所で順に処理する」仕組みを、部品そのものが持っている。<br />
+              チャットルームやカウンターを例に、単一スレッドと内蔵ストレージの意味を確かめる。
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="p-chapter is-upcoming">
+            <p class="p-chapter__label">第3章</p>
+            <h3 class="p-chapter__title">
+              D1 — 小さく分けて持つ RDB<span class="p-status">準備中</span>
+            </h3>
+            <p class="p-chapter__desc">
+              PostgreSQL や MySQL のサーバーと、SQLite を土台にした D1 を比べる。<br />
+              接続の扱い、容量の上限、読み取りレプリカ、テナントごとに DB を分ける設計を見ていく。
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="p-chapter is-upcoming">
+            <p class="p-chapter__label">第4章</p>
+            <h3 class="p-chapter__title">
+              R2 — エグレス料金のないオブジェクトストレージ<span class="p-status">準備中</span>
+            </h3>
+            <p class="p-chapter__desc">
+              S3 と同じ API で使えるオブジェクトストレージ。<br />
+              S3 ＋ CDN の構成と比べながら、料金の構造と Workers からの使い方を確かめる。
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="p-chapter is-upcoming">
+            <p class="p-chapter__label">第5章</p>
+            <h3 class="p-chapter__title">
+              AI Gateway — LLM の前に置く関所<span class="p-status">準備中</span>
+            </h3>
+            <p class="p-chapter__desc">
+              アプリから LLM の API を直接呼ぶ構成と、間に Gateway を挟む構成を比べる。<br />
+              キャッシュ・レート制限・ログ・フォールバックを 1 か所に集める意味と、Workers AI との違いを扱う。
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="p-chapter is-upcoming">
+            <p class="p-chapter__label">終章</p>
+            <h3 class="p-chapter__title">
+              組み立てる — 同じアプリを 2 通りに描く<span class="p-status">準備中</span>
+            </h3>
+            <p class="p-chapter__desc">
+              1 つのアプリを、通常の構成と Cloudflare の構成で並べて描く。<br />
+              常時稼働の課金と CPU 時間の課金の違い、向いている仕事と向いていない仕事をまとめる。
+            </p>
+          </div>
+        </li>
+      </ul>
+
+    </div>
+  </div>
+</main>
+
+<footer class="l-footer">
+  <div class="l-container">
+    <p>mutexn</p>
+  </div>
+</footer>
+
+</body>
+</html>

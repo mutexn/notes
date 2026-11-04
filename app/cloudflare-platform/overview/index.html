@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>序章 全体の地図 — Cloudflare プラットフォーム</title>
+<meta name="description" content="ロードバランサ・アプリケーションサーバー・RDB・オブジェクトストレージという定番の構成に、Cloudflare の部品を重ねる。エッジで動くことの意味と、状態をどこに置くかを図で示す。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  /* =======================================================================
+     デジタル庁デザインシステム（DADS）準拠
+     カラー値の出典: @digital-go-jp/design-tokens v2.0.1
+     トークンと l- / p- の命名、図の部品（d-）は app/sma-concept/design/ に揃える
+     ======================================================================= */
+  :root {
+    --white: #ffffff;
+    --gray-50: #f2f2f2;
+    --gray-420: #949494;   /* 対白 3.03:1  非テキスト下限 */
+    --gray-536: #767676;   /* 対白 4.54:1  テキスト下限 */
+    --gray-800: #333333;   /* 対白 12.63:1 */
+    --gray-900: #1a1a1a;   /* 対白 17.40:1 */
+    --black: #000000;
+    --link: #0017c1;           /* blue-900     対白 11.10:1 */
+    --link-visited: #8b008b;   /* magenta-900  対白  8.50:1 */
+    --link-active: #ac3e00;    /* orange-900   対白  6.10:1 */
+    --focus-yellow: #ffd43d;   /* yellow-300   フォーカス（変更禁止） */
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--white);
+    color: var(--gray-900);
+    /* Std-17N-170 */
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 17px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    /* 文節を単位に折る */
+    word-break: auto-phrase;
+    /* 小書き仮名・長音符を行頭に置かない */
+    line-break: strict;
+    /* 最終行に 1〜2 文字だけ残る折り返しを避ける */
+    text-wrap: pretty;
+  }
+
+  h1, h2, h3 { text-wrap: balance; }
+
+  /* ----- フォーカスインジケーター: Yellow-300 と Black の2重構造 ----- */
+  a:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 2px;
+    background-color: var(--focus-yellow);
+    color: var(--gray-900);
+    box-shadow: 0 0 0 2px var(--focus-yellow);
+    text-decoration-color: var(--gray-900);
+  }
+
+  /* ----- レイアウト ----- */
+  .l-container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .l-main { padding: 24px 0 80px; }
+
+  /* ----- パンくず ----- */
+  .l-breadcrumb {
+    padding: 24px 0 0;
+    /* Std-16N-170 */
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-breadcrumb ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 8px;
+  }
+  .l-breadcrumb li { display: flex; align-items: center; gap: 8px; }
+  .l-breadcrumb li + li::before { content: '\203A'; color: var(--gray-536); }
+
+  /* ----- 本文カラム: 読み物は幅を絞る ----- */
+  .p-prose { max-width: 720px; }
+
+  /* Std-45B-140 */
+  h1 {
+    font-size: 45px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0;
+    margin: 0 0 8px;
+  }
+  /* Std-24N-150 */
+  .p-subtitle {
+    margin: 0 0 1em;
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+
+  .p-prose p { margin: 0 0 1.2em; }
+  .p-prose ul, .p-prose ol { margin: 0 0 1.2em; padding-left: 1.6em; }
+  .p-prose li { margin-bottom: 0.5em; }
+
+  /* Std-32B-150 */
+  .p-prose h2 {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    margin: 0 0 0.6em;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gray-420);
+  }
+  /* 章番号。見出しの上に小さく置く: Std-16N-170 */
+  .p-prose h2 .p-secnum {
+    display: block;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-536);
+  }
+  /* Std-24B-150 */
+  .p-prose h3 {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    margin: 1.6em 0 0.5em;
+  }
+
+  .p-section { margin-top: 64px; }
+
+  /* キャッチコピー: Std-20N-150 */
+  .p-catch {
+    margin: 0 0 1.2em;
+    font-size: 20px;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+
+  /* ----- 本文中のリンク: 色以外にも下線で示す ----- */
+  .p-prose a, .l-breadcrumb a {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  .p-prose a:visited, .l-breadcrumb a:visited { color: var(--link-visited); }
+  .p-prose a:hover, .l-breadcrumb a:hover { text-decoration-thickness: 3px; }
+  .p-prose a:active, .l-breadcrumb a:active { color: var(--link-active); }
+
+  /* ----- ページ内目次 ----- */
+  .p-toc {
+    margin: 0 0 8px;
+    padding: 20px 24px;
+    background: var(--white);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+  }
+  .p-toc__title {
+    margin: 0 0 8px;
+    /* Std-16B-170 */
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-800);
+  }
+  .p-prose .p-toc ol {
+    margin: 0;
+    padding-left: 1.4em;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .p-prose .p-toc li { margin-bottom: 0.25em; }
+  .p-prose .p-toc li:last-child { margin-bottom: 0; }
+
+  /* ----- 補足ブロック -----
+     DADS の注釈ブロックは補足情報用で、文脈の切り替えには使わない規定のため独自に組む。
+     境界は影ではなく罫線で示す（--gray-420 は対白 3:1 以上） */
+  .p-aside {
+    margin: 2em 0;
+    padding: 20px 24px;
+    background: var(--gray-50);
+    border-left: 4px solid var(--gray-420);
+  }
+  /* Std-18B-160 */
+  .p-aside__title {
+    margin: 0 0 0.5em;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+  }
+  .p-prose .p-aside p { margin: 0 0 1em; }
+  .p-prose .p-aside p:last-child { margin-bottom: 0; }
+
+  /* ----- 対比表 -----
+     DADS の高密度用途は行高 130% だが、和文の可読性を優先して 1.4 を下限とする */
+  /* 横スクロールする領域はキーボードでも操作できるよう tabindex="0" と role="region" を付ける */
+  .p-table-wrap { margin: 0; overflow-x: auto; }
+  .p-table-wrap:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    box-shadow: 0 0 0 4px var(--focus-yellow);
+  }
+  .p-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+  /* 見出しセルの背景が gray-50 のため、罫線は gray-536（対 gray-50 4.06:1）を使う */
+  .p-table th, .p-table td {
+    padding: 12px;
+    border: 1px solid var(--gray-536);
+    text-align: left;
+    vertical-align: top;
+  }
+  .p-figure { margin: 1.5em 0; }
+  /* Std-16N-170 */
+  .p-table__caption {
+    margin: 0 0 8px;
+    font-size: 16px;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--gray-536);
+    text-align: left;
+  }
+  /* 横スクロールの手がかり。スクロールが起きる幅でだけ出す */
+  .p-table__hint { display: none; }
+  .p-table thead th {
+    background: var(--gray-50);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  /* 「第1章」のような短い語は折り返さない */
+  .p-table td.is-nowrap { white-space: nowrap; }
+  .p-table tbody th {
+    background: var(--gray-50);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* ----- 図（インライン SVG）-----
+     SVG は viewBox の幅で原寸表示する。縮小すると図中の文字が 14px を下回るため、
+     狭い画面では表と同じく横スクロールに切り替える（tabindex="0" と role="region" を付ける） */
+  .p-diagram { margin: 1.5em 0; }
+  .p-diagram__scroll { overflow-x: auto; }
+  .p-diagram__scroll:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    box-shadow: 0 0 0 4px var(--focus-yellow);
+  }
+  .p-diagram svg { display: block; max-width: none; }
+
+  /* 図の部品。罫線は gray-900、まとまりの枠は gray-536（対白 4.54:1、対 gray-50 4.06:1） */
+  .d-box { fill: var(--white); stroke: var(--gray-900); stroke-width: 1.5; }
+  .d-group { fill: var(--gray-50); stroke: var(--gray-536); stroke-width: 1; }
+  /* 論点になる要素だけ blue-900 で強調する */
+  .d-accent { stroke: var(--link); stroke-width: 2; }
+  .d-line { fill: none; stroke: var(--gray-900); stroke-width: 1.5; }
+  .d-line--accent { stroke: var(--link); stroke-width: 2; }
+  .d-line--dashed { stroke-dasharray: 6 4; }
+  .d-head { fill: var(--gray-900); }
+  .d-head--accent { fill: var(--link); }
+  /* 図中の文字は 14px 以上 */
+  .d-label { fill: var(--gray-900); font-size: 15px; font-weight: 700; }
+  .d-text { fill: var(--gray-900); font-size: 14px; }
+  .d-note { fill: var(--gray-800); font-size: 14px; }
+  .d-note--accent { fill: var(--link); font-weight: 700; }
+  /* 線の上に重なるラベルの下地。背後の線を隠す */
+  .d-mask { fill: var(--white); }
+
+  /* .p-prose a の下線・色は本文中のテキストリンク用。
+     ブロック全体を包むリンクには効かせない（下線はタイトルだけに付ける） */
+  .p-prose a.p-next {
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+
+  /* ----- 次章への導線 -----
+     DADS: コンテナ自体をクリッカブルエリア（フォーカス可能エリア）にできる。
+     その場合、コンテナ内に別のリンクを置いてはいけない */
+  .p-next {
+    display: block;
+    margin-top: 64px;
+    padding: 20px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-420);
+    border-radius: 8px;
+    color: var(--gray-800);
+    text-decoration: none;
+  }
+  a.p-next:hover { border-color: var(--gray-900); }
+  /* 大きな領域がフォーカス可能なので、全面を黄色で塗らずリング状の2重構造にする */
+  a.p-next:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 4px;
+    background-color: var(--gray-50);
+    box-shadow: 0 0 0 4px var(--focus-yellow);
+  }
+  /* gray-50 の上に載るので gray-800（11.29:1） */
+  .p-next__label {
+    margin: 0 0 4px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+    font-feature-settings: 'palt';
+  }
+  /* Std-20B-150。
+     DADS: コンテナ自体がリンクの場合もタイトルにアンダーラインを付与する */
+  .p-next__title {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+  a.p-next .p-next__title {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  a.p-next:visited .p-next__title { color: var(--link-visited); }
+  a.p-next:hover .p-next__title { text-decoration-thickness: 3px; }
+  a.p-next:active .p-next__title { color: var(--link-active); }
+  .p-next__desc {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+  }
+  /* ----- インラインコード: URL やコードだけは任意位置で折る ----- */
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.94em;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* ----- 参考 ----- */
+  .p-refs {
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  /* ----- フッター ----- */
+  .l-footer {
+    border-top: 1px solid var(--gray-420);
+    padding: 24px 0 40px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-536);
+  }
+  .l-footer p { margin: 0; }
+
+  /* ----- モバイル・タブレット: 768px 未満 ----- */
+  @media (max-width: 767px) {
+    body {
+      /* Std-16N-175 */
+      font-size: 16px;
+      line-height: 1.75;
+    }
+    .l-container { padding: 0 16px; }
+    .l-main { padding: 16px 0 56px; }
+    .l-breadcrumb { padding-top: 16px; }
+    /* Std-32B-150 */
+    h1 {
+      font-size: 32px;
+      line-height: 1.5;
+      letter-spacing: 0.01em;
+    }
+    /* Std-20N-150 */
+    .p-subtitle { font-size: 20px; }
+    /* Std-28B-150 */
+    .p-prose h2 { font-size: 28px; }
+    /* Std-22B-150 */
+    .p-prose h3 { font-size: 22px; }
+    .p-section { margin-top: 48px; }
+    /* Std-18N-160 */
+    .p-catch { font-size: 18px; line-height: 1.6; }
+    .p-toc { padding: 16px; }
+    .p-aside { padding: 16px; }
+    .p-next { padding: 16px; }
+    /* 3列を 375px に詰め込むと1行あたり数文字になって読めない。
+       列の多い表だけ、列幅を確保して横スクロールに切り替える */
+    .p-figure.is-wide .p-table { min-width: 560px; }
+    .p-figure.is-wide .p-table__hint { display: inline; }
+    .p-diagram .p-table__hint { display: inline; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="l-breadcrumb" aria-label="パンくず">
+  <div class="l-container">
+    <ol>
+      <li><a href="/">目次</a></li>
+      <li><a href="/cloudflare-platform/">Cloudflare プラットフォーム</a></li>
+      <li aria-current="page">序章</li>
+    </ol>
+  </div>
+</nav>
+
+<main class="l-main">
+  <div class="l-container">
+    <div class="p-prose">
+
+      <h1>全体の地図</h1>
+      <p class="p-subtitle">通常の構成と並べてみる</p>
+
+      <p class="p-catch">部品の名前は違っても、仕事の分担はほとんど同じ。違うのは、それぞれが「どこで」「どの単位で」動くかだ。</p>
+
+      <p>
+        Cloudflare の開発者プラットフォームには、名前だけでは役割の分からない部品が並んでいます。Workers、Durable Objects、D1、R2、KV、AI Gateway。最初に個別の説明を読むと、どれも便利そうに見えて、かえって全体像がつかめません。
+      </p>
+
+      <p>
+        そこでこの序章では、よく知っている Web アプリケーションの構成を先に描き、その上に Cloudflare の部品を 1 つずつ重ねていきます。各章で掘り下げる前に、地図を手に入れておくのが目的です。
+      </p>
+
+      <p>このページの前提は次のとおりです。</p>
+
+      <ul>
+        <li>Web サーバー、RDB、オブジェクトストレージを使った開発の経験があることを想定する</li>
+        <li>コードはほとんど載せず、図と文章で構成を示す</li>
+        <li>各サービスの提供状況と制限は、2026 年 10 月時点の公式ドキュメントに基づく</li>
+      </ul>
+
+      <nav class="p-toc" aria-label="このページの目次">
+        <p class="p-toc__title">このページの内容</p>
+        <ol>
+          <li><a href="#classic">定番の構成</a></li>
+          <li><a href="#overlay">Cloudflare の部品を重ねる</a></li>
+          <li><a href="#edge">エッジで動くということ</a></li>
+          <li><a href="#locality">計算は近くに、データは 1 か所に</a></li>
+          <li><a href="#state">状態をどこに置くか</a></li>
+          <li><a href="#kv">KV：遅れて届くキャッシュ</a></li>
+          <li><a href="#others">その他の部品</a></li>
+          <li><a href="#references">参考</a></li>
+        </ol>
+      </nav>
+
+      <!-- ===== 1 ===== -->
+      <section class="p-section" id="classic">
+        <h2><span class="p-secnum">1</span>定番の構成</h2>
+
+        <p>
+          まず、よく見かける Web アプリケーションの構成を描きます。クラウドの特定のサービスに依存しない、一般的な形です。
+        </p>
+
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-d1">図 1　定番の構成。アプリケーションサーバーは 1 つのリージョンに常駐し、データと周辺サービスにはネットワーク越しにつなぐ。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-d1">
+            <svg width="720" height="456" viewBox="0 0 720 456" role="img" aria-labelledby="cap-d1">
+              <defs>
+                <marker id="d1-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+
+              <rect class="d-box" x="260" y="16" width="200" height="40" rx="4" />
+              <text class="d-text" x="360" y="41" text-anchor="middle">利用者</text>
+              <line class="d-line" x1="360" y1="56" x2="360" y2="88" marker-end="url(#d1-a)" />
+
+              <rect class="d-box" x="160" y="88" width="400" height="48" rx="4" />
+              <text class="d-label" x="360" y="108" text-anchor="middle">CDN ＋ ロードバランサ</text>
+              <text class="d-note" x="360" y="127" text-anchor="middle">静的ファイルを返し、残りをサーバーへ振り分ける</text>
+              <line class="d-line" x1="360" y1="136" x2="360" y2="168" marker-end="url(#d1-a)" />
+
+              <rect class="d-group d-accent" x="16" y="168" width="688" height="88" rx="6" />
+              <text class="d-label" x="32" y="190">アプリケーション層 — 1 つのリージョンに常駐（例：東京）</text>
+              <rect class="d-box" x="32" y="204" width="208" height="40" rx="4" />
+              <text class="d-text" x="136" y="229" text-anchor="middle">アプリサーバー 1</text>
+              <rect class="d-box" x="256" y="204" width="208" height="40" rx="4" />
+              <text class="d-text" x="360" y="229" text-anchor="middle">アプリサーバー 2</text>
+              <rect class="d-box" x="480" y="204" width="208" height="40" rx="4" />
+              <text class="d-text" x="584" y="229" text-anchor="middle">アプリサーバー 3</text>
+
+              <line class="d-line" x1="360" y1="256" x2="360" y2="288" marker-end="url(#d1-a)" />
+              <text class="d-note" x="372" y="277">接続文字列と認証情報で、ネットワーク越しにつなぐ</text>
+
+              <rect class="d-group" x="16" y="288" width="688" height="152" rx="6" />
+              <text class="d-label" x="32" y="310">データと周辺サービス</text>
+              <rect class="d-box" x="32" y="320" width="208" height="48" rx="4" />
+              <text class="d-text" x="136" y="340" text-anchor="middle">RDB</text>
+              <text class="d-note" x="136" y="359" text-anchor="middle">PostgreSQL・MySQL</text>
+              <rect class="d-box" x="256" y="320" width="208" height="48" rx="4" />
+              <text class="d-text" x="360" y="340" text-anchor="middle">キャッシュ</text>
+              <text class="d-note" x="360" y="359" text-anchor="middle">Redis・Memcached</text>
+              <rect class="d-box" x="480" y="320" width="208" height="48" rx="4" />
+              <text class="d-text" x="584" y="340" text-anchor="middle">排他・共有状態</text>
+              <text class="d-note" x="584" y="359" text-anchor="middle">Redis のロック・Pub/Sub</text>
+              <rect class="d-box" x="32" y="380" width="208" height="48" rx="4" />
+              <text class="d-text" x="136" y="400" text-anchor="middle">ファイル</text>
+              <text class="d-note" x="136" y="419" text-anchor="middle">S3 など</text>
+              <rect class="d-box" x="256" y="380" width="208" height="48" rx="4" />
+              <text class="d-text" x="360" y="400" text-anchor="middle">ジョブキュー</text>
+              <text class="d-note" x="360" y="419" text-anchor="middle">SQS・RabbitMQ</text>
+              <rect class="d-box" x="480" y="380" width="208" height="48" rx="4" />
+              <text class="d-text" x="584" y="400" text-anchor="middle">LLM の API</text>
+              <text class="d-note" x="584" y="419" text-anchor="middle">アプリから直接呼ぶ</text>
+            </svg>
+          </div>
+        </figure>
+
+        <p>
+          この構成の要は、アプリケーションサーバーが<strong>常駐するプロセス</strong>だという点です。起動したプロセスはメモリ上に状態を持ち続け、DB への接続を張ったまま使い回します。台数を増やすときは、同じプロセスを並べてロードバランサで振り分けます。
+        </p>
+
+        <p>
+          一方、サーバーを並べると、1 台のメモリに置いた状態は他の台から見えなくなります。そこで、共有したい状態は Redis や RDB に追い出し、同じ対象への同時更新はロックで守ります。定番の構成で Redis がキャッシュと排他の 2 役を担うことが多いのは、このためです。
+        </p>
+      </section>
+
+      <!-- ===== 2 ===== -->
+      <section class="p-section" id="overlay">
+        <h2><span class="p-secnum">2</span>Cloudflare の部品を重ねる</h2>
+
+        <p>
+          図 1 と同じ配置のまま、各部品を Cloudflare のサービスに置き換えると、次のようになります。
+        </p>
+
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-d2">図 2　図 1 を Cloudflare の部品で置き換えたもの。アプリケーション層が、利用者を受けたデータセンターごとに分散する。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-d2">
+            <svg width="720" height="456" viewBox="0 0 720 456" role="img" aria-labelledby="cap-d2">
+              <defs>
+                <marker id="d2-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+
+              <rect class="d-box" x="260" y="16" width="200" height="40" rx="4" />
+              <text class="d-text" x="360" y="41" text-anchor="middle">利用者</text>
+              <line class="d-line" x1="360" y1="56" x2="360" y2="88" marker-end="url(#d2-a)" />
+
+              <rect class="d-box" x="160" y="88" width="400" height="48" rx="4" />
+              <text class="d-label" x="360" y="108" text-anchor="middle">Cloudflare のネットワーク</text>
+              <text class="d-note" x="360" y="127" text-anchor="middle">最寄りのデータセンターが、そのまま受ける</text>
+              <line class="d-line" x1="360" y1="136" x2="360" y2="168" marker-end="url(#d2-a)" />
+
+              <rect class="d-group d-accent" x="16" y="168" width="688" height="88" rx="6" />
+              <text class="d-label" x="32" y="190">アプリケーション層 — 受けたデータセンターで、リクエストごとに起動</text>
+              <rect class="d-box" x="32" y="204" width="208" height="40" rx="4" />
+              <text class="d-text" x="136" y="229" text-anchor="middle">Worker（東京）</text>
+              <rect class="d-box" x="256" y="204" width="208" height="40" rx="4" />
+              <text class="d-text" x="360" y="229" text-anchor="middle">Worker（ロンドン）</text>
+              <rect class="d-box" x="480" y="204" width="208" height="40" rx="4" />
+              <text class="d-text" x="584" y="229" text-anchor="middle">Worker（サンパウロ）</text>
+
+              <line class="d-line d-line--accent" x1="360" y1="256" x2="360" y2="288" marker-end="url(#d2-a)" />
+              <text class="d-note d-note--accent" x="372" y="277">binding でつなぐ（接続文字列を持たない）</text>
+
+              <rect class="d-group" x="16" y="288" width="688" height="152" rx="6" />
+              <text class="d-label" x="32" y="310">データと周辺サービス</text>
+              <rect class="d-box" x="32" y="320" width="208" height="48" rx="4" />
+              <text class="d-text" x="136" y="340" text-anchor="middle">D1</text>
+              <text class="d-note" x="136" y="359" text-anchor="middle">SQLite を土台にした SQL DB</text>
+              <rect class="d-box" x="256" y="320" width="208" height="48" rx="4" />
+              <text class="d-text" x="360" y="340" text-anchor="middle">KV</text>
+              <text class="d-note" x="360" y="359" text-anchor="middle">読み取り向けのキー・バリュー</text>
+              <rect class="d-box" x="480" y="320" width="208" height="48" rx="4" />
+              <text class="d-text" x="584" y="340" text-anchor="middle">Durable Objects</text>
+              <text class="d-note" x="584" y="359" text-anchor="middle">名前で 1 つに決まる状態</text>
+              <rect class="d-box" x="32" y="380" width="208" height="48" rx="4" />
+              <text class="d-text" x="136" y="400" text-anchor="middle">R2</text>
+              <text class="d-note" x="136" y="419" text-anchor="middle">S3 互換のストレージ</text>
+              <rect class="d-box" x="256" y="380" width="208" height="48" rx="4" />
+              <text class="d-text" x="360" y="400" text-anchor="middle">Queues</text>
+              <text class="d-note" x="360" y="419" text-anchor="middle">非同期処理のキュー</text>
+              <rect class="d-box" x="480" y="380" width="208" height="48" rx="4" />
+              <text class="d-text" x="584" y="400" text-anchor="middle">AI Gateway</text>
+              <text class="d-note" x="584" y="419" text-anchor="middle">LLM の前に置くプロキシ</text>
+            </svg>
+          </div>
+        </figure>
+
+        <figure class="p-figure is-wide">
+          <figcaption class="p-table__caption" id="cap-map">通常の構成の部品と、Cloudflare の部品の対応。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-table-wrap" tabindex="0" role="region" aria-labelledby="cap-map">
+            <table class="p-table" aria-labelledby="cap-map">
+              <thead>
+                <tr>
+                  <th scope="col">通常の構成</th>
+                  <th scope="col">Cloudflare</th>
+                  <th scope="col">いちばん大きな違い</th>
+                  <th scope="col">章</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">CDN ＋ ロードバランサ</th><td>Cloudflare のネットワーク</td><td>入口とアプリケーション層が同じデータセンターにある</td><td class="is-nowrap">序章</td></tr>
+                <tr><th scope="row">アプリサーバー</th><td>Workers</td><td>常駐せず、リクエストごとに isolate で動く</td><td class="is-nowrap">第1章</td></tr>
+                <tr><th scope="row">Redis のロック・共有状態</th><td>Durable Objects</td><td>排他の仕組みを外付けせず、部品そのものが 1 か所で順に処理する</td><td class="is-nowrap">第2章</td></tr>
+                <tr><th scope="row">RDB</th><td>D1</td><td>1 つの大きな DB ではなく、小さな DB をいくつも持つ前提</td><td class="is-nowrap">第3章</td></tr>
+                <tr><th scope="row">オブジェクトストレージ</th><td>R2</td><td>外へのデータ転送（エグレス）に料金がかからない</td><td class="is-nowrap">第4章</td></tr>
+                <tr><th scope="row">LLM の API を直接呼ぶ</th><td>AI Gateway</td><td>キャッシュ・制限・ログ・切り替えを 1 か所に集める</td><td class="is-nowrap">第5章</td></tr>
+                <tr><th scope="row">Redis のキャッシュ</th><td>KV</td><td>世界中で読めるが、更新が届くまで時間がかかる</td><td class="is-nowrap">序章</td></tr>
+                <tr><th scope="row">ジョブキュー</th><td>Queues</td><td>受け手も Worker で書く</td><td class="is-nowrap">序章</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </figure>
+
+        <p>
+          図 1 と図 2 を見比べると、変わったのは主に 2 か所です。
+        </p>
+
+        <p>
+          1 つ目は、アプリケーション層が 1 つのリージョンにまとまらず、利用者を受けたデータセンターごとに散らばることです。どこで動くかを決めるのは開発者ではなく、リクエストの到着地点です。これが次の節で扱う「エッジで動く」の意味です。
+        </p>
+
+        <p>
+          2 つ目は、アプリケーション層とデータをつなぐ線です。通常の構成では、ホスト名・ポート・パスワードを含む接続文字列を設定ファイルに書き、ネットワーク越しに接続します。Cloudflare では、設定ファイルで「この Worker は、この D1 を <code>DB</code> という名前で使う」と宣言し、コードからは <code>env.DB</code> として呼び出します。この宣言を <strong>binding</strong> と呼びます。接続先の場所も認証情報もコードには現れません。詳しくは第 1 章で扱います。
+        </p>
+      </section>
+
+      <!-- ===== 3 ===== -->
+      <section class="p-section" id="edge">
+        <h2><span class="p-secnum">3</span>エッジで動くということ</h2>
+
+        <p>
+          通常の構成では、アプリケーションサーバーを置くリージョンを 1 つ選びます。東京リージョンに置けば、東京の利用者には速く、ロンドンやサンパウロの利用者には遅くなります。光の速さで地球の裏側まで往復するだけで、100 ミリ秒以上かかるからです。
+        </p>
+
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-d3">図 3　左は 1 つのリージョンに置いた場合。右は Anycast で最寄りのデータセンターが受ける場合。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-d3">
+            <svg width="720" height="312" viewBox="0 0 720 312" role="img" aria-labelledby="cap-d3">
+              <defs>
+                <marker id="d3-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+                <marker id="d3-b" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head--accent" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+
+              <!-- 左：1 つのリージョン -->
+              <rect class="d-group" x="16" y="16" width="336" height="280" rx="6" />
+              <text class="d-label" x="32" y="40">通常：1 か所のリージョン</text>
+              <rect class="d-box" x="32" y="64" width="112" height="40" rx="4" />
+              <text class="d-text" x="88" y="89" text-anchor="middle">利用者（東京）</text>
+              <rect class="d-box" x="32" y="128" width="112" height="40" rx="4" />
+              <text class="d-text" x="88" y="153" text-anchor="middle">利用者（英国）</text>
+              <rect class="d-box" x="32" y="192" width="112" height="40" rx="4" />
+              <text class="d-text" x="88" y="217" text-anchor="middle">利用者（南米）</text>
+
+              <rect class="d-box d-accent" x="216" y="64" width="120" height="40" rx="4" />
+              <text class="d-text" x="276" y="89" text-anchor="middle">東京のサーバー</text>
+
+              <line class="d-line" x1="144" y1="84" x2="216" y2="84" marker-end="url(#d3-a)" />
+              <line class="d-line" x1="144" y1="148" x2="216" y2="96" marker-end="url(#d3-a)" />
+              <line class="d-line" x1="144" y1="212" x2="222" y2="104" marker-end="url(#d3-a)" />
+
+              <text class="d-note" x="228" y="148">遠い利用者ほど、</text>
+              <text class="d-note" x="228" y="168">往復が長くなる</text>
+              <text class="d-note" x="32" y="274">全員が東京まで往復する</text>
+
+              <!-- 右：Anycast -->
+              <rect class="d-group" x="368" y="16" width="336" height="280" rx="6" />
+              <text class="d-label" x="384" y="40">Cloudflare：Anycast</text>
+              <rect class="d-box" x="384" y="64" width="112" height="40" rx="4" />
+              <text class="d-text" x="440" y="89" text-anchor="middle">利用者（東京）</text>
+              <rect class="d-box" x="384" y="128" width="112" height="40" rx="4" />
+              <text class="d-text" x="440" y="153" text-anchor="middle">利用者（英国）</text>
+              <rect class="d-box" x="384" y="192" width="112" height="40" rx="4" />
+              <text class="d-text" x="440" y="217" text-anchor="middle">利用者（南米）</text>
+
+              <rect class="d-box d-accent" x="568" y="64" width="120" height="40" rx="4" />
+              <text class="d-text" x="628" y="89" text-anchor="middle">東京の DC</text>
+              <rect class="d-box d-accent" x="568" y="128" width="120" height="40" rx="4" />
+              <text class="d-text" x="628" y="153" text-anchor="middle">ロンドンの DC</text>
+              <rect class="d-box d-accent" x="568" y="192" width="120" height="40" rx="4" />
+              <text class="d-text" x="628" y="217" text-anchor="middle">サンパウロの DC</text>
+
+              <line class="d-line d-line--accent" x1="496" y1="84" x2="568" y2="84" marker-end="url(#d3-b)" />
+              <line class="d-line d-line--accent" x1="496" y1="148" x2="568" y2="148" marker-end="url(#d3-b)" />
+              <line class="d-line d-line--accent" x1="496" y1="212" x2="568" y2="212" marker-end="url(#d3-b)" />
+
+              <text class="d-note" x="384" y="256">全 DC が同じ IP アドレスを広告し、</text>
+              <text class="d-note" x="384" y="274">最寄りの DC が受けて Worker を動かす</text>
+            </svg>
+          </div>
+        </figure>
+
+        <p>
+          Cloudflare は、世界の 125 を超える国、330 を超える都市にデータセンター（DC）を持ち、そのすべてが同じ IP アドレスを広告しています。この方式を <strong>Anycast</strong> と呼びます。インターネットの経路制御は、同じ宛先が複数あれば近いほうへ届けるので、利用者のリクエストは自然と最寄りの DC に着きます。
+        </p>
+
+        <p>
+          そして Workers は、原則として<strong>リクエストを受けたその DC で</strong>実行されます。どの DC でも同じコードを動かせるように、デプロイしたコードは全 DC に配られます。つまり「リージョンを選ぶ」という設定そのものがありません。この「利用者に近い場所」をエッジと呼びます。
+        </p>
+      </section>
+
+      <!-- ===== 4 ===== -->
+      <section class="p-section" id="locality">
+        <h2><span class="p-secnum">4</span>計算は近くに、データは 1 か所に</h2>
+
+        <p>
+          ここで注意が要ります。Worker が利用者の近くで動いても、データまで近くにあるとは限りません。D1 のデータベースは、書き込みを受け付ける本体（プライマリ）が 1 か所にあります。Durable Object も、最初に呼ばれた場所の近くに作られ、その後は移動しません。ロンドンで動いた Worker が東京にある DB に 3 回問い合わせれば、ロンドンと東京の往復が 3 回発生します。
+        </p>
+
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-d4">図 4　上は、利用者の近くで動いた Worker が遠くの DB に何度も問い合わせる場合。下は、Worker を DB の近くで動かす場合。遠距離の往復が 1 回で済む。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-d4">
+            <svg width="720" height="328" viewBox="0 0 720 328" role="img" aria-labelledby="cap-d4">
+              <defs>
+                <marker id="d4-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+                <marker id="d4-b" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head--accent" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+
+              <!-- 上：利用者の近くで動く -->
+              <rect class="d-group" x="16" y="16" width="688" height="136" rx="6" />
+              <text class="d-label" x="32" y="40">利用者の近くで動かす</text>
+              <rect class="d-box" x="32" y="72" width="120" height="48" rx="4" />
+              <text class="d-text" x="92" y="101" text-anchor="middle">利用者（英国）</text>
+              <rect class="d-box" x="200" y="72" width="152" height="48" rx="4" />
+              <text class="d-text" x="276" y="92" text-anchor="middle">Worker</text>
+              <text class="d-note" x="276" y="111" text-anchor="middle">ロンドンの DC</text>
+              <rect class="d-box" x="552" y="72" width="136" height="48" rx="4" />
+              <text class="d-text" x="620" y="92" text-anchor="middle">DB</text>
+              <text class="d-note" x="620" y="111" text-anchor="middle">東京の DC</text>
+
+              <line class="d-line" x1="152" y1="96" x2="200" y2="96" marker-end="url(#d4-a)" />
+              <line class="d-line d-line--accent" x1="352" y1="80" x2="552" y2="80" marker-end="url(#d4-b)" />
+              <line class="d-line d-line--accent" x1="352" y1="96" x2="552" y2="96" marker-end="url(#d4-b)" />
+              <line class="d-line d-line--accent" x1="352" y1="112" x2="552" y2="112" marker-end="url(#d4-b)" />
+              <text class="d-note d-note--accent" x="452" y="140" text-anchor="middle">遠距離の往復 × 3</text>
+
+              <!-- 下：DB の近くで動く -->
+              <rect class="d-group" x="16" y="176" width="688" height="136" rx="6" />
+              <text class="d-label" x="32" y="200">DB の近くで動かす</text>
+              <rect class="d-box" x="32" y="232" width="120" height="48" rx="4" />
+              <text class="d-text" x="92" y="261" text-anchor="middle">利用者（英国）</text>
+              <rect class="d-box" x="200" y="232" width="152" height="48" rx="4" />
+              <text class="d-text" x="276" y="252" text-anchor="middle">入口</text>
+              <text class="d-note" x="276" y="271" text-anchor="middle">ロンドンの DC</text>
+              <rect class="d-box" x="400" y="232" width="120" height="48" rx="4" />
+              <text class="d-text" x="460" y="252" text-anchor="middle">Worker</text>
+              <text class="d-note" x="460" y="271" text-anchor="middle">東京の DC</text>
+              <rect class="d-box" x="568" y="232" width="120" height="48" rx="4" />
+              <text class="d-text" x="628" y="252" text-anchor="middle">DB</text>
+              <text class="d-note" x="628" y="271" text-anchor="middle">東京の DC</text>
+
+              <line class="d-line" x1="152" y1="256" x2="200" y2="256" marker-end="url(#d4-a)" />
+              <line class="d-line d-line--accent" x1="352" y1="256" x2="400" y2="256" marker-end="url(#d4-b)" />
+              <text class="d-note d-note--accent" x="376" y="300" text-anchor="middle">遠距離の往復 × 1</text>
+              <line class="d-line" x1="520" y1="244" x2="568" y2="244" marker-end="url(#d4-a)" />
+              <line class="d-line" x1="520" y1="256" x2="568" y2="256" marker-end="url(#d4-a)" />
+              <line class="d-line" x1="520" y1="268" x2="568" y2="268" marker-end="url(#d4-a)" />
+            </svg>
+          </div>
+        </figure>
+
+        <p>
+          この問題のために、Worker を動かす場所を変える設定が用意されています。<strong>Smart Placement</strong> は、候補となる場所ごとに処理にかかった時間を測り、バックエンドの近くで動かしたほうが明らかに速い場合にだけ、リクエストをそちらへ転送します。2026 年 1 月には、AWS などのリージョン名や接続先のホスト名を書いて、場所を明示的に指定する方法も加わりました。なお、Smart Placement はドキュメント上まだベータの扱いです。
+        </p>
+
+        <p>
+          エッジで動くことの利点がそのまま効くのは、データに触れない処理か、データが近くにある処理です。静的ファイルの配信、認証トークンの検証、リダイレクト、キャッシュから返せる応答などがこれに当たります。DB を何度も読む処理では、どこで動かすかを意識する必要があります。
+        </p>
+      </section>
+
+      <!-- ===== 5 ===== -->
+      <section class="p-section" id="state">
+        <h2><span class="p-secnum">5</span>状態をどこに置くか</h2>
+
+        <p>
+          Worker は常駐しないので、メモリに置いた値はリクエストが終われば失われるものとして扱います。残したいものは、すべて外の保存先に書きます。保存先は 4 種類あり、通常の構成で RDB と Redis とストレージに振り分けていたものを、性質に応じて選び分けます。
+        </p>
+
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-d5">図 5　保存先の選び方。上から順に問い、最初に「はい」になったものを選ぶ。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-d5">
+            <svg width="720" height="432" viewBox="0 0 720 432" role="img" aria-labelledby="cap-d5">
+              <defs>
+                <marker id="d5-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+
+              <rect class="d-box" x="16" y="16" width="440" height="48" rx="4" />
+              <text class="d-text" x="236" y="45" text-anchor="middle">画像・動画・バックアップなど、大きなファイルか</text>
+              <rect class="d-box d-accent" x="520" y="16" width="184" height="48" rx="4" />
+              <text class="d-label" x="612" y="36" text-anchor="middle">R2</text>
+              <text class="d-note" x="612" y="55" text-anchor="middle">オブジェクトストレージ</text>
+
+              <rect class="d-box" x="16" y="104" width="440" height="48" rx="4" />
+              <text class="d-text" x="236" y="133" text-anchor="middle">部屋・文書など、1 つの対象ごとに順に処理したいか</text>
+              <rect class="d-box d-accent" x="520" y="104" width="184" height="48" rx="4" />
+              <text class="d-label" x="612" y="124" text-anchor="middle">Durable Objects</text>
+              <text class="d-note" x="612" y="143" text-anchor="middle">対象ごとの強い一貫性</text>
+
+              <rect class="d-box" x="16" y="192" width="440" height="48" rx="4" />
+              <text class="d-text" x="236" y="221" text-anchor="middle">表として持ち、SQL で検索・集計したいか</text>
+              <rect class="d-box d-accent" x="520" y="192" width="184" height="48" rx="4" />
+              <text class="d-label" x="612" y="212" text-anchor="middle">D1</text>
+              <text class="d-note" x="612" y="231" text-anchor="middle">SQL のデータベース</text>
+
+              <rect class="d-box" x="16" y="280" width="440" height="48" rx="4" />
+              <text class="d-text" x="236" y="309" text-anchor="middle">読み取りが大半で、更新の反映が遅れてもよいか</text>
+              <rect class="d-box d-accent" x="520" y="280" width="184" height="48" rx="4" />
+              <text class="d-label" x="612" y="300" text-anchor="middle">KV</text>
+              <text class="d-note" x="612" y="319" text-anchor="middle">読み取り向けのストア</text>
+
+              <rect class="d-group" x="16" y="368" width="440" height="48" rx="4" />
+              <text class="d-note" x="236" y="397" text-anchor="middle">どれでもない → D1 か Durable Objects に戻って考える</text>
+
+              <!-- はい -->
+              <line class="d-line" x1="456" y1="40" x2="520" y2="40" marker-end="url(#d5-a)" />
+              <line class="d-line" x1="456" y1="128" x2="520" y2="128" marker-end="url(#d5-a)" />
+              <line class="d-line" x1="456" y1="216" x2="520" y2="216" marker-end="url(#d5-a)" />
+              <line class="d-line" x1="456" y1="304" x2="520" y2="304" marker-end="url(#d5-a)" />
+              <text class="d-note" x="488" y="32" text-anchor="middle">はい</text>
+              <text class="d-note" x="488" y="120" text-anchor="middle">はい</text>
+              <text class="d-note" x="488" y="208" text-anchor="middle">はい</text>
+              <text class="d-note" x="488" y="296" text-anchor="middle">はい</text>
+
+              <!-- いいえ -->
+              <line class="d-line" x1="236" y1="64" x2="236" y2="104" marker-end="url(#d5-a)" />
+              <line class="d-line" x1="236" y1="152" x2="236" y2="192" marker-end="url(#d5-a)" />
+              <line class="d-line" x1="236" y1="240" x2="236" y2="280" marker-end="url(#d5-a)" />
+              <line class="d-line" x1="236" y1="328" x2="236" y2="368" marker-end="url(#d5-a)" />
+              <text class="d-note" x="248" y="89">いいえ</text>
+              <text class="d-note" x="248" y="177">いいえ</text>
+              <text class="d-note" x="248" y="265">いいえ</text>
+              <text class="d-note" x="248" y="353">いいえ</text>
+            </svg>
+          </div>
+        </figure>
+
+        <figure class="p-figure is-wide">
+          <figcaption class="p-table__caption" id="cap-state">4 つの保存先の性質。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-table-wrap" tabindex="0" role="region" aria-labelledby="cap-state">
+            <table class="p-table" aria-labelledby="cap-state">
+              <thead>
+                <tr>
+                  <th scope="col">保存先</th>
+                  <th scope="col">データの形</th>
+                  <th scope="col">一貫性</th>
+                  <th scope="col">通常の構成で近いもの</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">R2</th><td>オブジェクト（ファイル）</td><td>強い一貫性。書いた直後から、世界中で最新の内容が読める。ただし CDN のキャッシュを通すと緩む</td><td>S3 などのオブジェクトストレージ</td></tr>
+                <tr><th scope="row">Durable Objects</th><td>オブジェクトごとの SQLite（1 つあたり 10 GB まで）</td><td>オブジェクトの中では強い一貫性。処理は 1 本ずつ順に進む</td><td>Redis のロック、スティッキーセッション</td></tr>
+                <tr><th scope="row">D1</th><td>SQLite の表（1 DB あたり 10 GB まで）</td><td>プライマリでは強い一貫性。読み取りレプリカを使う場合は、セッションの中で順序が保たれる</td><td>PostgreSQL・MySQL</td></tr>
+                <tr><th scope="row">KV</th><td>キーと値（値は 25 MiB まで）</td><td>結果整合性。別の DC に届くまで最大 60 秒ほど</td><td>Redis・Memcached のキャッシュ</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </figure>
+
+        <p>
+          図 5 で Durable Objects を D1 より先に問うているのは、「1 つの対象ごとに順に処理したい」という要求が、通常の構成ではロックや Redis を追加して初めて満たせるものだからです。Cloudflare では、この要求を満たす部品が最初から用意されていて、しかも Durable Object は自分専用の SQL のストレージを持っています。対象ごとに分けられるデータなら、D1 を使わずに Durable Objects だけで済む場合もあります。この関係は第 2 章と第 3 章で詳しく見ます。
+        </p>
+
+        <p>
+          すでに PostgreSQL や MySQL のデータベースを運用しているなら、それを使い続ける道もあります。Hyperdrive は、Worker から既存の DB への接続をプールし、読み取りをキャッシュする仕組みです。D1 に移すかどうかとは別に検討できます。
+        </p>
+      </section>
+
+      <!-- ===== 6 ===== -->
+      <section class="p-section" id="kv">
+        <h2><span class="p-secnum">6</span>KV：遅れて届くキャッシュ</h2>
+
+        <p>
+          KV はこのノートで独立した章を設けないので、ここで性質を押さえておきます。
+        </p>
+
+        <p>
+          KV は、キーと値の組を世界中から読めるストアです。本体は少数の中央のデータセンターに置かれ、各データセンターは読んだ値を一定時間キャッシュします。書き込みを全拠点に配って回るわけではなく、各拠点がキャッシュの期限が切れたときに取りに行く仕組みです。
+        </p>
+
+        <figure class="p-diagram">
+          <figcaption class="p-table__caption" id="cap-d6">図 6　KV の書き込みが別の DC に届くまで。DC B は、キャッシュの期限が切れるまで古い値を返し続ける。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-diagram__scroll" tabindex="0" role="region" aria-labelledby="cap-d6">
+            <svg width="720" height="272" viewBox="0 0 720 272" role="img" aria-labelledby="cap-d6">
+              <defs>
+                <marker id="d6-a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z" /></marker>
+                <marker id="d6-b" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="d-head--accent" d="M0,0 L10,5 L0,10 z" /></marker>
+              </defs>
+
+              <!-- 行の見出し -->
+              <rect class="d-group" x="16" y="40" width="144" height="40" rx="4" />
+              <text class="d-text" x="88" y="65" text-anchor="middle">DC A（書く側）</text>
+              <rect class="d-group" x="16" y="104" width="144" height="40" rx="4" />
+              <text class="d-text" x="88" y="129" text-anchor="middle">中央のストア</text>
+              <rect class="d-group" x="16" y="168" width="144" height="40" rx="4" />
+              <text class="d-text" x="88" y="193" text-anchor="middle">DC B（読む側）</text>
+
+              <!-- 書き込み -->
+              <rect class="d-box" x="200" y="46" width="128" height="28" rx="4" />
+              <text class="d-text" x="264" y="65" text-anchor="middle">新しい値を書く</text>
+              <line class="d-line" x1="264" y1="74" x2="264" y2="110" marker-end="url(#d6-a)" />
+              <rect class="d-box" x="200" y="110" width="128" height="28" rx="4" />
+              <text class="d-text" x="264" y="129" text-anchor="middle">新しい値を保存</text>
+
+              <!-- 読み取り -->
+              <rect class="d-box" x="352" y="174" width="104" height="28" rx="4" />
+              <text class="d-text" x="404" y="193" text-anchor="middle">古い値</text>
+              <rect class="d-box" x="472" y="174" width="104" height="28" rx="4" />
+              <text class="d-text" x="524" y="193" text-anchor="middle">古い値</text>
+              <rect class="d-box d-accent" x="592" y="174" width="104" height="28" rx="4" />
+              <text class="d-text" x="644" y="193" text-anchor="middle">新しい値</text>
+
+              <polyline class="d-line d-line--accent d-line--dashed" points="328,124 644,124 644,172" marker-end="url(#d6-b)" />
+              <text class="d-note d-note--accent" x="486" y="114" text-anchor="middle">期限が切れてから、中央に取りに行く</text>
+              <text class="d-note" x="464" y="226" text-anchor="middle">別の DC に届くまで、最大 60 秒ほど（それ以上のことも）</text>
+
+              <!-- 時間軸 -->
+              <line class="d-line" x1="176" y1="248" x2="704" y2="248" marker-end="url(#d6-a)" />
+              <text class="d-note" x="176" y="266">時間</text>
+            </svg>
+          </div>
+        </figure>
+
+        <p>
+          そのため、ある場所で書いた値が他の場所で見えるようになるまで、最大で 60 秒ほど、場合によってはそれ以上かかります。「キーが存在しない」という結果もキャッシュされるので、新しく作ったキーも同じだけ遅れて見えます。公式ドキュメントは、書き込んだ場所で直後に読んだ場合でさえ、新しい値が返るとは保証していません。
+        </p>
+
+        <p>
+          さらに、同じキーへの書き込みは 1 秒に 1 回までです。カウンターのように同じキーを頻繁に更新する用途や、読んでから書き戻すまでを不可分に行いたい用途には向きません。KV は Redis のキャッシュの代わりにはなっても、Redis のロックやカウンターの代わりにはなりません。そちらは Durable Objects の仕事です。
+        </p>
+
+        <p>
+          向いているのは、設定値、機能フラグ、許可リスト、描画結果のキャッシュなど、読み取りが圧倒的に多く、更新が数十秒遅れて届いても困らないデータです。
+        </p>
+      </section>
+
+      <!-- ===== 7 ===== -->
+      <section class="p-section" id="others">
+        <h2><span class="p-secnum">7</span>その他の部品</h2>
+
+        <p>
+          このノートの主役以外にも、通常の構成の部品に対応するサービスがあります。各章で必要に応じて触れるので、ここでは対応だけを示します。
+        </p>
+
+        <figure class="p-figure is-wide">
+          <figcaption class="p-table__caption" id="cap-others">その他の部品と、通常の構成で近いもの。<span class="p-table__hint">（横にスクロールできます）</span></figcaption>
+          <div class="p-table-wrap" tabindex="0" role="region" aria-labelledby="cap-others">
+            <table class="p-table" aria-labelledby="cap-others">
+              <thead>
+                <tr>
+                  <th scope="col">サービス</th>
+                  <th scope="col">通常の構成で近いもの</th>
+                  <th scope="col">何をするか</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Queues</th><td>SQS・RabbitMQ</td><td>メッセージを送り、別の Worker がまとめて受け取って処理する。失敗したら再試行する</td></tr>
+                <tr><th scope="row">Workflows</th><td>Step Functions・Temporal</td><td>複数のステップからなる長い処理を、途中の状態を保存しながら進める。失敗したステップだけをやり直し、数日の待機や外部からの通知待ちもできる</td></tr>
+                <tr><th scope="row">Hyperdrive</th><td>PgBouncer などの接続プール</td><td>Worker から既存の PostgreSQL・MySQL につなぐときの接続を使い回し、よく使うクエリの結果をキャッシュする</td></tr>
+                <tr><th scope="row">Vectorize</th><td>pgvector・Pinecone</td><td>ベクトルを保存し、近いものを検索する。埋め込みを使った検索や RAG に使う</td></tr>
+                <tr><th scope="row">Workers AI</th><td>OpenAI API・Amazon Bedrock などの推論 API</td><td>Cloudflare の GPU でオープンなモデルを動かす。第 5 章で AI Gateway と比べる</td></tr>
+                <tr><th scope="row">Containers</th><td>Cloud Run・AWS Fargate</td><td>任意の言語のコンテナイメージを動かす。Workers の制約に収まらない処理の受け皿で、Durable Object を通じて起動・制御する</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </figure>
+      </section>
+
+      <!-- ===== 参考 ===== -->
+      <section class="p-section" id="references">
+        <h2>参考</h2>
+        <ul class="p-refs">
+          <li><a href="https://developers.cloudflare.com/workers/reference/how-workers-works/">Workers: How Workers works</a></li>
+          <li><a href="https://developers.cloudflare.com/workers/runtime-apis/bindings/">Workers: Bindings</a></li>
+          <li><a href="https://developers.cloudflare.com/workers/configuration/placement/">Workers: Placement</a></li>
+          <li><a href="https://developers.cloudflare.com/changelog/post/2026-01-22-explicit-placement-hints/">Explicit placement hints（Changelog, 2026-01-22）</a></li>
+          <li><a href="https://developers.cloudflare.com/workers/platform/storage-options/">Workers: Choosing a data or storage product</a></li>
+          <li><a href="https://developers.cloudflare.com/reference-architecture/architectures/cdn/">Reference Architecture: Content Delivery Network</a></li>
+          <li><a href="https://blog.cloudflare.com/500-tbps-of-capacity/">500 Tbps of capacity（Cloudflare Blog, 2026-04-10）</a></li>
+          <li><a href="https://developers.cloudflare.com/kv/concepts/how-kv-works/">KV: How KV works</a></li>
+          <li><a href="https://developers.cloudflare.com/kv/platform/limits/">KV: Limits</a></li>
+          <li><a href="https://developers.cloudflare.com/durable-objects/reference/data-location/">Durable Objects: Data location</a></li>
+          <li><a href="https://developers.cloudflare.com/durable-objects/platform/limits/">Durable Objects: Limits</a></li>
+          <li><a href="https://developers.cloudflare.com/d1/platform/limits/">D1: Limits</a></li>
+          <li><a href="https://developers.cloudflare.com/d1/best-practices/read-replication/">D1: Global read replication</a></li>
+          <li><a href="https://developers.cloudflare.com/r2/reference/consistency/">R2: Consistency model</a></li>
+          <li><a href="https://developers.cloudflare.com/queues/">Queues</a></li>
+          <li><a href="https://developers.cloudflare.com/workflows/">Workflows</a></li>
+          <li><a href="https://developers.cloudflare.com/hyperdrive/">Hyperdrive</a></li>
+          <li><a href="https://developers.cloudflare.com/vectorize/">Vectorize</a></li>
+          <li><a href="https://developers.cloudflare.com/workers-ai/">Workers AI</a></li>
+          <li><a href="https://developers.cloudflare.com/containers/">Containers</a></li>
+        </ul>
+      </section>
+
+      <a class="p-next" href="/cloudflare-platform/" aria-labelledby="next-hub">
+        <p class="p-next__label">章の一覧へ</p>
+        <p class="p-next__title" id="next-hub">Cloudflare プラットフォーム — 通常のサーバーと DB から読み解く</p>
+        <p class="p-next__desc">第 1 章以降は準備中です。公開した章から順に、この一覧に追加していきます。</p>
+      </a>
+
+    </div>
+  </div>
+</main>
+
+<footer class="l-footer">
+  <div class="l-container">
+    <p>mutexn</p>
+  </div>
+</footer>
+
+</body>
+</html>
